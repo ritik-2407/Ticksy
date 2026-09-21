@@ -1,0 +1,200 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Ticksy — Prisma Schema
+// Multi-tenant issue tracker (Jira-lite)
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // url is no longer declared here (Prisma 7+).
+  // The CLI reads the connection string from prisma.config.ts (migrations).
+  // The runtime PrismaClient receives it via the @prisma/adapter-pg driver adapter.
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+// Who a user is within a workspace. ADMIN can delete tickets/members,
+// MEMBER can only read and create.
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+// The four Kanban columns. Maps directly to the board's column order.
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+// How urgent is this ticket? Used for sorting and AI auto-triage.
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+// The person who logs in. No workspace data here — workspace membership
+// is tracked separately in the Membership join table.
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  image     String?  // avatar URL (from OAuth providers)
+  createdAt DateTime @default(now())
+
+  // NextAuth required fields (for @auth/prisma-adapter)
+  emailVerified DateTime?
+  accounts      Account[]
+  sessions      Session[]
+
+  // A user can be a member of many workspaces (via the join table)
+  memberships Membership[]
+
+  // A user can be assigned to many tickets AND can create many tickets.
+  // TWO separate relations to the same model (User ↔ Ticket) require
+  // explicit names, otherwise Prisma can't tell them apart.
+  assignedTickets Ticket[]  @relation("AssignedTickets")
+  createdTickets  Ticket[]  @relation("CreatedTickets")
+
+  comments Comment[]
+}
+
+// NextAuth adapter models — required for session + account management.
+// You don't touch these manually; the adapter handles them.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// A "company" or "team" in the app. Users belong to workspaces via Membership.
+// slug is the URL identifier: ticksy.app/acme-corp/tickets
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique // e.g. "acme-corp" — used in every URL
+  createdAt DateTime @default(now())
+
+  members Membership[]
+  tickets Ticket[]
+  labels  Label[]
+}
+
+// The join table between User and Workspace.
+// Stores the role so we know if a user is ADMIN or MEMBER inside that workspace.
+// The @@unique constraint guarantees one user can't have two memberships
+// in the same workspace — enforced at the database level, not app level.
+model Membership {
+  id   String @id @default(cuid())
+  role Role   @default(MEMBER)
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+
+  createdAt DateTime @default(now())
+
+  // THE constraint: one row per (user, workspace) pair
+  @@unique([userId, workspaceId])
+}
+
+// The core entity. Belongs to a workspace, optionally assigned to a user.
+// createdBy is always set. assignee is optional (unassigned is valid).
+model Ticket {
+  id          String       @id @default(cuid())
+  title       String
+  description String       @db.Text // store long markdown descriptions
+  status      TicketStatus @default(OPEN)
+  priority    Priority     @default(MEDIUM)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt // auto-updated by Prisma on any write
+
+  // TENANT ISOLATION: every ticket belongs to exactly one workspace.
+  // Every query MUST filter by workspaceId.
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+
+  // Named relations — needed because User appears twice on this model
+  assignee    User?   @relation("AssignedTickets", fields: [assigneeId], references: [id])
+  assigneeId  String? // nullable = unassigned
+  createdBy   User    @relation("CreatedTickets", fields: [createdById], references: [id])
+  createdById String
+
+  // Many-to-many with Label via implicit join table (Prisma handles the table)
+  labels Label[] @relation("TicketLabels")
+
+  comments Comment[]
+
+  // This index is what makes the Kanban board fast.
+  // The query "get all OPEN tickets in workspace X" uses both columns.
+  // Without it: full table scan across ALL workspaces' tickets.
+  @@index([workspaceId, status])
+  // Secondary index for dashboard queries (sort/filter by priority)
+  @@index([workspaceId, priority])
+}
+
+// Workspace-scoped tags. Labels created in Workspace A are invisible in Workspace B.
+// Many-to-many with Ticket via the @relation("TicketLabels") implicit join table.
+model Label {
+  id    String @id @default(cuid())
+  name  String // e.g. "bug", "feature", "auth"
+  color String // hex color, e.g. "#ef4444" — used for the colored pill in UI
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String
+
+  // Prisma creates an implicit _TicketLabels join table for this
+  tickets Ticket[] @relation("TicketLabels")
+}
+
+// Append-only comment thread on a ticket. No editing (keeps audit trail clean).
+model Comment {
+  id        String   @id @default(cuid())
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId String
+
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId String
+}
