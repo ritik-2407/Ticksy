@@ -184,9 +184,14 @@ model Label {
 
   // Prisma creates an implicit _TicketLabels join table for this
   tickets Ticket[] @relation("TicketLabels")
+
+  // "bug" can exist in Acme and in Nova. It cannot exist twice inside Acme.
+  // The leading workspaceId also serves list queries: WHERE workspaceId = X.
+  @@unique([workspaceId, name])
 }
 
-// Append-only comment thread on a ticket. No editing (keeps audit trail clean).
+// A comment on a ticket. The author can rewrite body later; createdAt stays
+// the time it was first posted. There is no delete.
 model Comment {
   id        String   @id @default(cuid())
   body      String   @db.Text
@@ -197,4 +202,7 @@ model Comment {
 
   author   User   @relation(fields: [authorId], references: [id])
   authorId String
+
+  // The thread query is "comments on this ticket, oldest first".
+  @@index([ticketId, createdAt])
 }
