@@ -3,7 +3,6 @@
 /**
  * Creates a ticket with POST /api/workspaces/[slug]/tickets.
  * The board inserts the returned ticket into its own state.
- * A refresh is not required, and the server still owns workspaceId and createdById.
  */
 
 import { useEffect, useState, type FormEvent } from "react";
@@ -74,64 +73,67 @@ export function NewTicketDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
       <button
         type="button"
         aria-label="Close new ticket"
-        className="absolute inset-0 bg-black/40"
+        className="absolute inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-[2px]"
         onClick={() => {
           if (!saving) onClose();
         }}
       />
+
+      {/* Dialog */}
       <form
         onSubmit={submit}
         role="dialog"
         aria-modal="true"
         aria-labelledby="new-ticket-title"
-        className="relative z-10 w-full max-w-md rounded-xl bg-white p-5 shadow-xl"
+        className="relative z-10 w-full max-w-md rounded-2xl
+                   bg-white/90 dark:bg-zinc-900/90 backdrop-blur-2xl
+                   border border-black/[0.08] dark:border-white/[0.08]
+                   shadow-[0_24px_64px_rgba(0,0,0,0.15)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.7)]
+                   p-5"
       >
         <div className="flex items-center justify-between">
-          <h2 id="new-ticket-title" className="text-sm font-semibold text-gray-900">
+          <h2 id="new-ticket-title" className="text-sm font-semibold text-gray-900 dark:text-gray-100">
             New ticket
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
-          >
+          <button type="button" onClick={onClose} className="btn-ghost">
             Close
           </button>
         </div>
 
         <div className="mt-4 space-y-4">
           <label className="block">
-            <span className="text-xs font-medium text-gray-500">Title</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Title</span>
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               autoFocus
               required
               maxLength={200}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+              className="glass-input mt-1 w-full"
             />
           </label>
 
           <label className="block">
-            <span className="text-xs font-medium text-gray-500">Description</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Description</span>
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               rows={4}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+              className="glass-input mt-1 w-full"
             />
           </label>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-xs font-medium text-gray-500">Status</span>
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Status</span>
               <select
                 value={status}
                 onChange={(event) => setStatus(event.target.value as Ticket["status"])}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                className="glass-input mt-1 w-full cursor-pointer"
               >
                 {BOARD_COLUMNS.map((column) => (
                   <option key={column.status} value={column.status}>
@@ -142,11 +144,11 @@ export function NewTicketDialog({
             </label>
 
             <label className="block">
-              <span className="text-xs font-medium text-gray-500">Priority</span>
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Priority</span>
               <select
                 value={priority}
                 onChange={(event) => setPriority(event.target.value as Ticket["priority"])}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                className="glass-input mt-1 w-full cursor-pointer"
               >
                 {PRIORITIES.map((level) => (
                   <option key={level} value={level}>
@@ -160,7 +162,7 @@ export function NewTicketDialog({
           <AssigneePicker slug={slug} value={assigneeId} onChange={setAssigneeId} />
 
           {error ? (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-red-600 dark:text-red-400">
               {error}
             </p>
           ) : null}
@@ -169,7 +171,7 @@ export function NewTicketDialog({
         <button
           type="submit"
           disabled={saving}
-          className="mt-5 w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+          className="btn-primary mt-5 w-full"
         >
           {saving ? "Creating…" : "Create ticket"}
         </button>

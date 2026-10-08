@@ -2,20 +2,103 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+/* ─── Design tokens ─────────────────────────────────────────────────── */
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    color-scheme: light;
+    --page-bg: #ffffff;
+    --surface: rgba(255, 255, 255, 0.78);
+    --surface-border: rgba(0, 0, 0, 0.08);
+    --surface-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    --header-bg: rgba(255, 255, 255, 0.88);
+    --input-bg: rgba(255, 255, 255, 0.8);
+    --input-border: rgba(0, 0, 0, 0.14);
+    --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  }
+
+  .dark {
+    color-scheme: dark;
+    --page-bg: #09090b;
+    --surface: rgba(255, 255, 255, 0.045);
+    --surface-border: rgba(255, 255, 255, 0.08);
+    --surface-shadow: 0 2px 24px rgba(0, 0, 0, 0.5);
+    --header-bg: rgba(9, 9, 11, 0.88);
+    --input-bg: rgba(255, 255, 255, 0.06);
+    --input-border: rgba(255, 255, 255, 0.1);
+    --scrollbar-thumb: rgba(255, 255, 255, 0.12);
+  }
+
+  html {
+    @apply scroll-smooth antialiased;
+  }
+
+  body {
+    background-color: var(--page-bg);
+    @apply text-gray-900 dark:text-gray-100;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto,
+      Helvetica, Arial, sans-serif;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    min-height: 100vh;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+/* ─── Glassmorphism utilities ──────────────────────────────────────── */
+@layer utilities {
+  /* Standard glass panel (cards, forms, sections) */
+  .glass {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    box-shadow: var(--surface-shadow);
+    backdrop-filter: blur(20px) saturate(1.6);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  }
+
+  /* Sticky header glass */
+  .glass-header {
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--surface-border);
+    backdrop-filter: blur(24px) saturate(1.8);
+    -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  }
+
+  /* Form inputs */
+  .glass-input {
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    @apply text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2 text-sm
+           placeholder:text-gray-400 dark:placeholder:text-gray-600
+           focus:outline-none focus:ring-2 focus:ring-gray-900/15 dark:focus:ring-white/15
+           transition-[box-shadow,border-color] duration-150;
+  }
+
+  /* Primary action button */
+  .btn-primary {
+    @apply bg-gray-900 dark:bg-white text-white dark:text-gray-900
+           hover:bg-gray-700 dark:hover:bg-gray-100
+           disabled:bg-gray-300 dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400
+           disabled:cursor-not-allowed
+           font-medium rounded-lg px-4 py-2 text-sm transition-colors duration-150;
+  }
+
+  /* Ghost/secondary button */
+  .btn-ghost {
+    @apply text-gray-600 dark:text-gray-400
+           hover:bg-black/[0.06] dark:hover:bg-white/[0.08]
+           rounded-md px-2 py-1 text-sm transition-colors duration-150;
+  }
 }

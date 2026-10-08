@@ -1,57 +1,51 @@
 /**
  * POST /api/workspaces/[slug]/invites
  *
- * Generates an invite link for a workspace. Only ADMINs can create invites.
+ * Creates an invite for one email address. Only ADMINs can do this.
  *
- * WHY only ADMINs?
- *   Anyone with a MEMBER role being able to invite others would let a single
- *   compromised account recruit unlimited people into the workspace.
- *   Gating it on ADMIN keeps membership growth controlled.
+ * The token carries that email. The accept page refuses a signed-in user
+ * whose email does not match, so forwarding the link does not add a stranger.
  *
  * Request body:
- *   { "role": "MEMBER" }          ← what role the invitee will get on acceptance
- *   { "role": "ADMIN" }           ← invite someone as a co-admin
- *   (role is optional, defaults to "MEMBER")
+ *   { "email": "ada@acme.com", "role": "MEMBER" }
+ *   role is optional and defaults to MEMBER.
  *
- * Response:
- *   { inviteUrl: "http://localhost:3000/invite/accept?token=eyJ..." }
- *
- * NOTE on email delivery:
- *   This endpoint returns the URL — it does NOT send an email.
- *   Plug in Resend (https://resend.com) or Nodemailer here when you're ready.
- *   Pattern:
- *     await resend.emails.send({ to: email, subject: "...", html: `<a href="${inviteUrl}">Join</a>` })
+ * When RESEND_API_KEY and RESEND_FROM are set, the link is emailed.
+ * Otherwise the response still includes inviteUrl so the admin can copy it.
  *
  * Responses:
- *   201  { inviteUrl }
- *   400  { error }   — invalid role
- *   401  { error }   — not signed in
- *   403  { error }   — not a member OR not an ADMIN
- *   500  { error }   — unexpected error
+ *   201  { inviteUrl, emailed, email }
+ *   400  { error, issues }
+ *   401  { error }
+ *   403  { error }
+ *   409  { error }   — that email is already a member
+ *   500  { error }
  */
 
 import { auth } from "@/auth";
 import { requireAdmin } from "@/lib/guard";
 import { signInviteToken } from "@/lib/invite";
+import { sendInviteEmail } from "@/lib/mail";
+import prisma from "@/lib/prisma";
 import { z } from "zod";
 import { Role } from "@prisma/client";
 
-// ─── Validation ──────────────────────────────────────────────────────────────
-
 const InviteSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email("Enter a valid email address.")
+    .max(254)
+    .transform((value) => value.toLowerCase()),
   role: z.nativeEnum(Role).default(Role.MEMBER),
 });
-
-// ─── Route handler ───────────────────────────────────────────────────────────
 
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  // ── Auth ─────────────────────────────────────────────────────────────────
   const session = await auth();
 
-  // ── Guard: must be ADMIN ──────────────────────────────────────────────────
   let workspaceId: string;
   let slug: string;
   try {
@@ -61,12 +55,11 @@ export async function POST(
     return res as Response;
   }
 
-  // ── Parse body ────────────────────────────────────────────────────────────
   let body: unknown;
   try {
     body = await req.json();
   } catch {
-    body = {}; // body is optional — default role is MEMBER
+    return Response.json({ error: "Request body must be valid JSON." }, { status: 400 });
   }
 
   const parsed = InviteSchema.safeParse(body);
@@ -77,31 +70,48 @@ export async function POST(
     );
   }
 
-  const { role } = parsed.data;
+  const { email, role } = parsed.data;
 
-  // ── Sign token + build URL ────────────────────────────────────────────────
+  const already = await prisma.membership.findFirst({
+    where: {
+      workspaceId,
+      user: { email: { equals: email, mode: "insensitive" } },
+    },
+    select: { id: true },
+  });
+
+  if (already) {
+    return Response.json(
+      { error: `${email} is already a member of this workspace.` },
+      { status: 409 }
+    );
+  }
+
   try {
-    const token = await signInviteToken({ workspaceId, slug, role });
-
-    // AUTH_URL is the app's base URL (http://localhost:3000 in dev)
-    const baseUrl = process.env.AUTH_URL ?? "http://localhost:3000";
-    const inviteUrl = `${baseUrl}/invite/accept?token=${token}`;
-
-    // TODO: send email here via Resend or Nodemailer
-    // Example (Resend):
-    //   await resend.emails.send({
-    //     from: "Ticksy <noreply@ticksy.app>",
-    //     to: recipientEmail,
-    //     subject: `You've been invited to ${slug} on Ticksy`,
-    //     html: `<a href="${inviteUrl}">Accept invite</a>`,
-    //   })
-
-    // Dev convenience: log the link so you can test without email setup
-    if (process.env.NODE_ENV === "development") {
-      console.log(`\n[DEV] Invite URL for workspace "${slug}":\n${inviteUrl}\n`);
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { name: true },
+    });
+    if (!workspace) {
+      return Response.json({ error: "Workspace not found." }, { status: 404 });
     }
 
-    return Response.json({ inviteUrl }, { status: 201 });
+    const token = await signInviteToken({ workspaceId, slug, role, email });
+    const baseUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+    const inviteUrl = `${baseUrl}/invite/accept?token=${token}`;
+
+    const { sent } = await sendInviteEmail({
+      to: email,
+      workspaceName: workspace.name,
+      role,
+      inviteUrl,
+    });
+
+    if (process.env.NODE_ENV === "development") {
+      console.log(`\n[DEV] Invite for ${email} in "${slug}":\n${inviteUrl}\n`);
+    }
+
+    return Response.json({ inviteUrl, emailed: sent, email }, { status: 201 });
   } catch (err) {
     console.error("[POST /api/workspaces/[slug]/invites]", err);
     return Response.json({ error: "Internal server error." }, { status: 500 });

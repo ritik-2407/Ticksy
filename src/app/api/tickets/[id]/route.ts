@@ -35,10 +35,10 @@
  */
 
 import { auth } from "@/auth";
-import { requireTicket } from "@/lib/guard";
+import { requireTicket, requireTicketAdmin } from "@/lib/guard";
 import prisma from "@/lib/prisma";
 import { ensureAssigneeIsMember, ensureLabelsInWorkspace, ticketSelect } from "@/lib/ticket";
-import { Prisma, Priority, Role, TicketStatus } from "@prisma/client";
+import { Prisma, Priority, TicketStatus } from "@prisma/client";
 import { z } from "zod";
 
 const PatchTicketSchema = z
@@ -223,23 +223,22 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
+  const { id } = await params;
+
+  // A random string is not a ticket id. 404, same as a real id you can't see.
+  // Check this before the query so Prisma never sees a non-cuid.
+  if (!z.string().cuid().safeParse(id).success) {
+    return ticketNotFound();
+  }
 
   let ticketId: string;
   let workspaceId: string;
-  let role: Role;
   try {
-    ({ ticketId, workspaceId, role } = await authorize(params, session?.user?.id));
+    // Members can edit a ticket. Removing one is an admin action.
+    // requireTicketAdmin returns 404 for a stranger and 403 for a member.
+    ({ ticketId, workspaceId } = await requireTicketAdmin(id, session?.user?.id));
   } catch (res) {
     return res as Response;
-  }
-
-  // Members can edit a ticket. Removing one is an admin action, same as
-  // removing a person from the workspace.
-  if (role !== Role.ADMIN) {
-    return Response.json(
-      { error: "Forbidden — only workspace admins can delete tickets." },
-      { status: 403 }
-    );
   }
 
   try {

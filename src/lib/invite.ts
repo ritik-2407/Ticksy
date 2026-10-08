@@ -18,9 +18,14 @@
  *     workspaceId: string   ← the Prisma workspace id (not the slug)
  *     slug:        string   ← used in the redirect after acceptance
  *     role:        "ADMIN" | "MEMBER"
+ *     email:       string   ← the address the invite was sent to (lowercased)
  *     iat:         number   ← issued-at (set by jose automatically)
  *     exp:         number   ← expiry  (set by jose automatically, 48h from now)
  *   }
+ *
+ * The accept page only creates a membership when the signed-in user's email
+ * matches `email`. A forwarded link cannot be used by someone else.
+ * Tokens issued before email was required have no `email` and still work.
  *
  * Security:
  *   - Signed with AUTH_SECRET using HMAC-SHA256 (HS256) — same key NextAuth uses.
@@ -29,8 +34,9 @@
  *     That's intentional — it's a feature, not a bug.
  */
 
-import { SignJWT, jwtVerify, type JWTPayload } from "jose";
+import { SignJWT, jwtVerify } from "jose";
 import { Role } from "@prisma/client";
+import { z } from "zod";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -38,7 +44,16 @@ export type InvitePayload = {
   workspaceId: string;
   slug: string;
   role: Role;
+  /** Lowercased. Absent only on tokens created before invites required an email. */
+  email?: string;
 };
+
+const InviteClaimsSchema = z.object({
+  workspaceId: z.string().min(1),
+  slug: z.string().min(1),
+  role: z.nativeEnum(Role),
+  email: z.string().email().optional(),
+});
 
 // ─── Key ─────────────────────────────────────────────────────────────────────
 
@@ -65,15 +80,36 @@ function getSecret(): Uint8Array {
  * Returns the compact JWT string — embed it in the invite URL.
  *
  * @example
- *   const token = await signInviteToken({ workspaceId, slug, role: "MEMBER" })
+ *   const token = await signInviteToken({ workspaceId, slug, role: "MEMBER", email })
  *   const url   = `${process.env.AUTH_URL}/invite/accept?token=${token}`
  */
-export async function signInviteToken(payload: InvitePayload): Promise<string> {
-  return new SignJWT({ ...payload })
+export async function signInviteToken(
+  payload: InvitePayload & { email: string }
+): Promise<string> {
+  return new SignJWT({
+    workspaceId: payload.workspaceId,
+    slug: payload.slug,
+    role: payload.role,
+    email: payload.email.trim().toLowerCase(),
+  })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("48h") // invite links are valid for 48 hours
     .sign(getSecret());
+}
+
+/**
+ * True when this token may be accepted by the signed-in user.
+ * A missing invite email is a legacy token and is allowed.
+ * Otherwise the two addresses must match, ignoring case.
+ */
+export function inviteEmailMatches(
+  inviteEmail: string | undefined,
+  sessionEmail: string | null | undefined
+): boolean {
+  if (!inviteEmail) return true;
+  if (!sessionEmail) return false;
+  return inviteEmail.toLowerCase() === sessionEmail.trim().toLowerCase();
 }
 
 // ─── Verify ──────────────────────────────────────────────────────────────────
@@ -90,7 +126,9 @@ export async function signInviteToken(payload: InvitePayload): Promise<string> {
  */
 export async function verifyInviteToken(token: string): Promise<InvitePayload> {
   const { payload } = await jwtVerify(token, getSecret());
-  // Type-cast: we know we put these fields in at sign time.
-  // A stricter implementation would validate each field with Zod after verify.
-  return payload as JWTPayload & InvitePayload;
+  const parsed = InviteClaimsSchema.safeParse(payload);
+  if (!parsed.success) {
+    throw new Error("Invite token is missing required claims.");
+  }
+  return parsed.data;
 }

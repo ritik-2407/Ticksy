@@ -1,16 +1,7 @@
 "use client";
 
 /**
- * Assignee control for one workspace.
- *
- * Loads GET /api/workspaces/[slug]/members and lets you pick one of them,
- * or Unassigned. The value is a user id. An empty string means unassigned.
- * The parent still sends that id (or null) on save. This component never
- * writes the ticket itself.
- *
- * The list is a filter, not a free-text name. Typing narrows the members
- * already in this workspace. Someone who is not a member cannot be chosen
- * here, and the API would reject them anyway.
+ * Assignee combobox for one workspace.
  */
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
@@ -59,8 +50,6 @@ export function AssigneePicker({
   }, [slug]);
 
   useEffect(() => {
-    // Members arrive after the field mounts. Until the user types, the
-    // text should follow the selected person, including that late load.
     if (edited.current) return;
     setQuery(selectedName);
   }, [selectedName]);
@@ -123,7 +112,7 @@ export function AssigneePicker({
       }}
     >
       <label className="block">
-        <span className="text-xs font-medium text-gray-500">Assignee</span>
+        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Assignee</span>
         <input
           role="combobox"
           aria-expanded={open}
@@ -139,7 +128,7 @@ export function AssigneePicker({
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+          className="glass-input mt-1 w-full"
         />
       </label>
 
@@ -147,10 +136,15 @@ export function AssigneePicker({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+          className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-xl
+                     border border-black/[0.08] dark:border-white/[0.08]
+                     bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl
+                     py-1 shadow-lg dark:shadow-black/40"
         >
           {options.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-gray-400">No members match</li>
+            <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-600">
+              No members match
+            </li>
           ) : (
             options.map((option, index) => (
               <li key={option.id || "unassigned"} role="presentation">
@@ -160,8 +154,10 @@ export function AssigneePicker({
                   aria-selected={option.id === value}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => choose(option)}
-                  className={`block w-full px-3 py-1.5 text-left text-sm ${
-                    index === highlight ? "bg-gray-100 text-gray-900" : "text-gray-700"
+                  className={`block w-full px-3 py-1.5 text-left text-sm transition-colors ${
+                    index === highlight
+                      ? "bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-gray-100"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
                   }`}
                 >
                   {option.name}
@@ -172,7 +168,9 @@ export function AssigneePicker({
         </ul>
       ) : null}
 
-      {error ? <span className="mt-1 block text-xs text-red-600">{error}</span> : null}
+      {error ? (
+        <span className="mt-1 block text-xs text-red-600 dark:text-red-400">{error}</span>
+      ) : null}
     </div>
   );
 }

@@ -8,7 +8,7 @@
  *   If it passes, it returns the membership row so the caller has the user's
  *   role without a second DB round-trip.
  *
- * THREE guards:
+ * FOUR guards:
  *
  *   requireMembership(slug, userId)
  *     → "Is this user logged-in AND a member of this workspace?"
@@ -16,7 +16,7 @@
  *
  *   requireAdmin(slug, userId)
  *     → "Is this user an ADMIN of this workspace?"
- *     → Used only on destructive/privileged routes: DELETE member, update workspace name …
+ *     → Used only on destructive/privileged slug routes: DELETE member, create a label, invite …
  *     → Internally calls requireMembership first — one function call is enough.
  *
  *   requireTicket(ticketId, userId)
@@ -24,6 +24,10 @@
  *     → Used on /api/tickets/[id], where the URL has no slug.
  *     → A missing ticket and a ticket in another workspace both return 404.
  *       403 would tell a stranger "that id is real, you just can't see it."
+ *
+ *   requireTicketAdmin(ticketId, userId)
+ *     → requireTicket, then ADMIN. Used for DELETE /api/tickets/[id].
+ *     → A non-member still gets 404. A member who is not an admin gets 403.
  *
  * WHY throw a Response instead of returning null?
  *   If we returned null, every caller would need to write:
@@ -157,8 +161,10 @@ export async function requireMembership(
  * Use this on privileged routes:
  *   - DELETE /api/workspaces/[slug]/members/[id]
  *   - PATCH  /api/workspaces/[slug]  (rename workspace)
+ *   - DELETE /api/workspaces/[slug]  (delete workspace)
  *   - POST   /api/workspaces/[slug]/invites
  *   - POST   /api/workspaces/[slug]/labels
+ *   - PATCH / DELETE /api/workspaces/[slug]/labels/[labelId]
  *
  * @param slug     - The workspace slug from the URL
  * @param userId   - Optional: pre-resolved userId
@@ -231,6 +237,35 @@ export async function requireTicket(
     role: membership.role,
     ticketId: ticket.id,
   };
+}
+
+/**
+ * requireTicketAdmin(ticketId, userId?)
+ *
+ * Same lookup as requireTicket, then refuses anyone who is not an ADMIN.
+ * Call this on destructive ticket routes (DELETE). Do not re-check
+ * `role !== ADMIN` in the handler — that check is easy to drop on the
+ * next edit.
+ *
+ * A stranger and a missing id still get 404 from requireTicket.
+ * A member who is not an admin gets 403.
+ */
+export async function requireTicketAdmin(
+  ticketId: string,
+  userId?: string
+): Promise<GuardResult & { ticketId: string }> {
+  const result = await requireTicket(ticketId, userId);
+
+  if (result.role !== Role.ADMIN) {
+    throw new Response(
+      JSON.stringify({
+        error: "Forbidden — only workspace admins can perform this action.",
+      }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  return result;
 }
 
 function ticketNotFound(): Response {

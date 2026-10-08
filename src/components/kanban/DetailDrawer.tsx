@@ -6,14 +6,10 @@
  * Clicking a card opens this panel. Save sends one PATCH with the fields
  * the form owns: title, description, status, priority, assignee.
  * Labels are edited on their own, with the full labelIds set.
- *
- * Comments are a separate form under the fields. Posting or editing one
- * does not save or discard the ticket edits above it.
  * Admins can delete the ticket. Members cannot.
  *
  * Closing the panel drops unsaved ticket edits. The board only changes
- * after a successful save, using the ticket object the API returns.
- * A new comment updates the card's comment count on its own.
+ * after a successful save. A new comment updates the card's comment count.
  */
 
 import { useEffect, useState, type FormEvent } from "react";
@@ -126,61 +122,71 @@ export function DetailDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
+      {/* Backdrop */}
       <button
         type="button"
         aria-label="Close ticket"
-        className="absolute inset-0 bg-black/40"
+        className="absolute inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-[2px]"
         onClick={onClose}
       />
+
+      {/* Drawer panel */}
       <aside
         role="dialog"
         aria-modal="true"
         aria-labelledby="ticket-drawer-title"
-        className="relative z-10 flex h-full w-full max-w-md flex-col bg-white shadow-xl"
+        className="relative z-10 flex h-full w-full max-w-md flex-col
+                   bg-white/90 dark:bg-zinc-900/90 backdrop-blur-2xl
+                   border-l border-black/[0.08] dark:border-white/[0.08]
+                   shadow-[−8px_0_48px_rgba(0,0,0,0.12)] dark:shadow-[-8px_0_48px_rgba(0,0,0,0.6)]"
       >
-        <header className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-          <h2 id="ticket-drawer-title" className="text-sm font-semibold text-gray-900">
+        {/* Drawer header */}
+        <header className="flex items-center justify-between
+                           border-b border-black/[0.07] dark:border-white/[0.07]
+                           px-5 py-4">
+          <h2 id="ticket-drawer-title" className="text-sm font-semibold text-gray-900 dark:text-gray-100">
             Ticket
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
+            className="btn-ghost"
           >
             Close
           </button>
         </header>
 
+        {/* Scrollable body */}
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           <form id="ticket-fields" onSubmit={save} className="space-y-4">
             <label className="block">
-              <span className="text-xs font-medium text-gray-500">Title</span>
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Title</span>
               <input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                className="glass-input mt-1 w-full"
                 maxLength={200}
                 required
               />
             </label>
 
             <label className="block">
-              <span className="text-xs font-medium text-gray-500">Description</span>
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Description</span>
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 rows={6}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                className="glass-input mt-1 w-full"
               />
             </label>
 
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
-                <span className="text-xs font-medium text-gray-500">Status</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Status</span>
                 <select
                   value={status}
                   onChange={(event) => setStatus(event.target.value as Ticket["status"])}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                  className="glass-input mt-1 w-full cursor-pointer"
                 >
                   {BOARD_COLUMNS.map((column) => (
                     <option key={column.status} value={column.status}>
@@ -191,11 +197,11 @@ export function DetailDrawer({
               </label>
 
               <label className="block">
-                <span className="text-xs font-medium text-gray-500">Priority</span>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Priority</span>
                 <select
                   value={priority}
                   onChange={(event) => setPriority(event.target.value as Ticket["priority"])}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                  className="glass-input mt-1 w-full cursor-pointer"
                 >
                   {PRIORITIES.map((level) => (
                     <option key={level} value={level}>
@@ -208,7 +214,9 @@ export function DetailDrawer({
 
             <AssigneePicker slug={slug} value={assigneeId} onChange={setAssigneeId} />
 
-            <p className="text-xs text-gray-400">Created by {ticket.createdBy.name}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-600">
+              Created by {ticket.createdBy.name}
+            </p>
           </form>
 
           <LabelEditor
@@ -226,22 +234,25 @@ export function DetailDrawer({
           />
         </div>
 
-        <footer className="space-y-3 border-t border-gray-200 px-5 py-4">
+        {/* Footer */}
+        <footer className="space-y-3 border-t border-black/[0.07] dark:border-white/[0.07] px-5 py-4">
           {error ? (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-red-600 dark:text-red-400">
               {error}
             </p>
           ) : null}
           {role === "ADMIN" ? (
             confirmDelete ? (
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-gray-600">Delete this ticket and its comments?</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Delete this ticket and its comments?
+                </p>
                 <div className="flex shrink-0 gap-2">
                   <button
                     type="button"
                     onClick={() => setConfirmDelete(false)}
                     disabled={deleting}
-                    className="rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
+                    className="btn-ghost"
                   >
                     Cancel
                   </button>
@@ -249,7 +260,11 @@ export function DetailDrawer({
                     type="button"
                     onClick={() => void remove()}
                     disabled={deleting}
-                    className="rounded-md px-2 py-1 text-sm font-medium text-red-700 hover:bg-red-50 disabled:text-red-300"
+                    className="rounded-md px-2 py-1 text-sm font-medium
+                               text-red-700 dark:text-red-400
+                               hover:bg-red-50 dark:hover:bg-red-950/40
+                               disabled:text-red-300 dark:disabled:text-red-800
+                               transition-colors"
                   >
                     {deleting ? "Deleting…" : "Delete"}
                   </button>
@@ -262,7 +277,7 @@ export function DetailDrawer({
                   setConfirmDelete(true);
                   setError(null);
                 }}
-                className="text-sm text-red-600 hover:text-red-700"
+                className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
               >
                 Delete ticket
               </button>
@@ -272,7 +287,7 @@ export function DetailDrawer({
             type="submit"
             form="ticket-fields"
             disabled={!dirty || saving || deleting}
-            className="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="btn-primary w-full"
           >
             {saving ? "Saving…" : "Save"}
           </button>

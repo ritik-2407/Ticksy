@@ -10,7 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await auth();
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50 text-gray-900">
+    <div className="flex min-h-screen flex-col bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
       {session?.user ? (
         <AppHeader
           name={session.user.name?.trim() || "You"}

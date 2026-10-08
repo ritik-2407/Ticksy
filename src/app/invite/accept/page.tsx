@@ -22,9 +22,9 @@
  */
 
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { auth, signOut } from "@/auth";
 import prisma from "@/lib/prisma";
-import { verifyInviteToken } from "@/lib/invite";
+import { inviteEmailMatches, verifyInviteToken } from "@/lib/invite";
 import { Prisma } from "@prisma/client";
 
 type Props = {
@@ -51,12 +51,23 @@ export default async function InviteAcceptPage({ searchParams }: Props) {
   let workspaceId: string;
   let slug: string;
   let role: Awaited<ReturnType<typeof verifyInviteToken>>["role"];
+  let email: string | undefined;
 
   try {
-    ({ workspaceId, slug, role } = await verifyInviteToken(token));
+    ({ workspaceId, slug, role, email } = await verifyInviteToken(token));
   } catch {
     // jose throws on expired or tampered tokens
     return <InviteError message="This invite link has expired or is invalid. Ask your admin for a new one." />;
+  }
+
+  if (!inviteEmailMatches(email, session.user.email)) {
+    return (
+      <WrongAccount
+        invited={email ?? "another address"}
+        current={session.user.email ?? "an account with no email"}
+        token={token}
+      />
+    );
   }
 
   // ── Create Membership (idempotent) ──────────────────────────────────────
@@ -88,6 +99,43 @@ export default async function InviteAcceptPage({ searchParams }: Props) {
 }
 
 // ─── Error UI ─────────────────────────────────────────────────────────────────
+
+function WrongAccount({
+  invited,
+  current,
+  token,
+}: {
+  invited: string;
+  current: string;
+  token: string;
+}) {
+  const returnTo = `/invite/accept?token=${encodeURIComponent(token)}`;
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+        <h2 className="mb-2 text-lg font-semibold text-gray-900">Wrong account</h2>
+        <p className="text-sm text-gray-500">
+          This invite was sent to {invited}. You are signed in as {current}.
+        </p>
+        <form
+          className="mt-6"
+          action={async () => {
+            "use server";
+            await signOut({ redirectTo: returnTo });
+          }}
+        >
+          <button
+            type="submit"
+            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+          >
+            Sign out and switch account
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 function InviteError({ message }: { message: string }) {
   return (

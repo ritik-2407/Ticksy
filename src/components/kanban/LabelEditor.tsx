@@ -1,15 +1,7 @@
 "use client";
 
 /**
- * Workspace labels on one ticket.
- *
- * The catalog comes from GET /api/workspaces/[slug]/labels. Clicking a
- * chip PATCHes the ticket with the full labelIds set. Save on the ticket
- * form does not send labelIds, so a title edit cannot wipe these.
- *
- * Creating a label is admin-only, matching POST on that route. Members
- * can still attach labels that already exist. A new label is added to
- * the catalog and is not attached until someone clicks it.
+ * Workspace labels on one ticket — toggle attach/detach, create new labels (admin only).
  */
 
 import { useEffect, useState, type FormEvent } from "react";
@@ -129,13 +121,16 @@ export function LabelEditor({
   }
 
   return (
-    <section className="mt-6 border-t border-gray-200 pt-4" aria-label="Labels">
-      <h3 className="text-xs font-medium text-gray-500">Labels</h3>
+    <section
+      className="mt-6 border-t border-black/[0.06] dark:border-white/[0.06] pt-4"
+      aria-label="Labels"
+    >
+      <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400">Labels</h3>
 
       {loading ? (
-        <p className="mt-3 text-sm text-gray-400">Loading labels…</p>
+        <p className="mt-3 text-sm text-gray-400 dark:text-gray-600">Loading labels…</p>
       ) : catalog.length === 0 ? (
-        <p className="mt-3 text-sm text-gray-400">No labels yet.</p>
+        <p className="mt-3 text-sm text-gray-400 dark:text-gray-600">No labels yet.</p>
       ) : (
         <ul className="mt-3 flex flex-wrap gap-1.5">
           {catalog.map((label) => {
@@ -147,10 +142,11 @@ export function LabelEditor({
                   aria-pressed={on}
                   disabled={busy}
                   onClick={() => void toggle(label.id)}
-                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs disabled:opacity-60 ${
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5
+                              text-xs transition-all duration-150 disabled:opacity-60 ${
                     on
-                      ? "border-gray-900 bg-gray-900 text-white"
-                      : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                      ? "border-gray-900 dark:border-white bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+                      : "border-black/[0.1] dark:border-white/[0.15] bg-black/[0.03] dark:bg-white/[0.05] text-gray-700 dark:text-gray-300 hover:bg-black/[0.06] dark:hover:bg-white/[0.1]"
                   }`}
                 >
                   <span
@@ -175,7 +171,7 @@ export function LabelEditor({
               onChange={(event) => setName(event.target.value)}
               maxLength={40}
               placeholder="New label"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+              className="glass-input w-full"
             />
           </label>
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Label color">
@@ -186,7 +182,11 @@ export function LabelEditor({
                 aria-label={swatch}
                 aria-pressed={color === swatch}
                 onClick={() => setColor(swatch)}
-                className={`h-5 w-5 rounded-full ${color === swatch ? "ring-2 ring-gray-900 ring-offset-2" : ""}`}
+                className={`h-5 w-5 rounded-full transition-all duration-150 ${
+                  color === swatch
+                    ? "ring-2 ring-gray-900 dark:ring-white ring-offset-2 dark:ring-offset-zinc-900 scale-110"
+                    : "hover:scale-110"
+                }`}
                 style={{ backgroundColor: swatch }}
               />
             ))}
@@ -194,7 +194,7 @@ export function LabelEditor({
           <button
             type="submit"
             disabled={creating || name.trim().length === 0}
-            className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="btn-primary !px-3 !py-1.5"
           >
             {creating ? "Adding…" : "Add label"}
           </button>
@@ -202,7 +202,7 @@ export function LabelEditor({
       ) : null}
 
       {error ? (
-        <p role="alert" className="mt-2 text-sm text-red-600">
+        <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
           {error}
         </p>
       ) : null}

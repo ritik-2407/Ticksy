@@ -15,6 +15,35 @@ export const BOARD_COLUMNS: { status: TicketStatus; title: string }[] = [
   { status: "DONE", title: "Done" },
 ];
 
+type Priority = TicketCard["priority"];
+
+/** Urgent first. The board filter and the home counts use this order. */
+export const PRIORITIES: { priority: Priority; title: string }[] = [
+  { priority: "CRITICAL", title: "Critical" },
+  { priority: "HIGH", title: "High" },
+  { priority: "MEDIUM", title: "Medium" },
+  { priority: "LOW", title: "Low" },
+];
+
+export type PriorityFilter = "ALL" | Priority;
+export type AssigneeFilter = "ALL" | "UNASSIGNED" | string;
+
+/**
+ * Hide tickets that do not match the board filters.
+ * ALL leaves that dimension alone. UNASSIGNED keeps tickets with no assignee.
+ * The full list stays in state so clearing a filter brings every card back.
+ */
+export function filterTickets<
+  T extends { priority: Priority; assignee: { id: string } | null },
+>(tickets: T[], filters: { priority: PriorityFilter; assignee: AssigneeFilter }): T[] {
+  return tickets.filter((ticket) => {
+    if (filters.priority !== "ALL" && ticket.priority !== filters.priority) return false;
+    if (filters.assignee === "UNASSIGNED") return ticket.assignee === null;
+    if (filters.assignee !== "ALL") return ticket.assignee?.id === filters.assignee;
+    return true;
+  });
+}
+
 /**
  * Bucket tickets into the four columns.
  * The query already returns newest-updated first within each status,

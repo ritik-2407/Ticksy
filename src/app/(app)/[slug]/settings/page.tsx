@@ -1,28 +1,17 @@
 /**
- * /[slug] — the workspace board.
+ * /[slug]/settings — rename, labels, and delete.
  *
- * Example: /acme-corp
- *
- * This is a Server Component. It reads the database directly instead of
- * calling GET /api/workspaces/[slug]/tickets. The API exists for the client
- * (drag-and-drop in the next step, and anything outside this Next.js app).
- * A server render that fetches its own API would pay for an extra HTTP hop
- * and would have to forward the session cookie by hand. The query here is
- * the same one the API uses: workspaceId from the guard, ticketSelect, newest
- * update first inside each status.
- *
- * requireMembership throws a Response. In a page we catch it and render,
- * because a thrown Response is an API habit, not a page.
+ * Any member can open the URL. Only an admin sees the forms. The API
+ * checks the role again, so hiding the form is not the security boundary.
  */
 
-import { Board } from "@/components/kanban/Board";
+import { WorkspaceSettings } from "@/components/settings/WorkspaceSettings";
 import { auth } from "@/auth";
 import { requireMembership } from "@/lib/guard";
 import prisma from "@/lib/prisma";
-import { ticketSelect } from "@/lib/ticket";
 import { redirect } from "next/navigation";
 
-export default async function WorkspacePage({
+export default async function SettingsPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -30,11 +19,8 @@ export default async function WorkspacePage({
   const { slug } = await params;
   const session = await auth();
 
-  // Middleware only checks that a session cookie exists. A missing or
-  // expired session is caught here, on the Node runtime, where auth() can
-  // read the database.
   if (!session?.user?.id) {
-    redirect(`/sign-in?callbackUrl=/${slug}`);
+    redirect(`/sign-in?callbackUrl=/${slug}/settings`);
   }
 
   let workspaceId: string;
@@ -50,20 +36,24 @@ export default async function WorkspacePage({
     );
   }
 
-  const [workspace, tickets, memberships] = await Promise.all([
+  if (role !== "ADMIN") {
+    return (
+      <Status
+        title="Admins only"
+        body="Workspace name, labels, and deletion are limited to admins."
+      />
+    );
+  }
+
+  const [workspace, labels] = await Promise.all([
     prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: { name: true, slug: true },
     }),
-    prisma.ticket.findMany({
+    prisma.label.findMany({
       where: { workspaceId },
-      orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
-      select: ticketSelect,
-    }),
-    prisma.membership.findMany({
-      where: { workspaceId },
-      orderBy: { user: { name: "asc" } },
-      select: { user: { select: { id: true, name: true } } },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, color: true },
     }),
   ]);
 
@@ -77,13 +67,10 @@ export default async function WorkspacePage({
   }
 
   return (
-    <Board
+    <WorkspaceSettings
       workspaceName={workspace.name}
       slug={workspace.slug}
-      role={role}
-      currentUserId={session.user.id}
-      members={memberships.map((membership) => membership.user)}
-      tickets={tickets}
+      labels={labels}
     />
   );
 }

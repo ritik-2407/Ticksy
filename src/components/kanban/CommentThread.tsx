@@ -2,17 +2,6 @@
 
 /**
  * Append-only comment thread for one ticket.
- *
- * Loads GET /api/tickets/[id]/comments when the panel opens, and posts
- * with POST on that same route. The author is the signed-in user; this
- * component never sends authorId or ticketId in the body.
- *
- * The author can rewrite their own comment with
- * PATCH /api/tickets/[id]/comments/[commentId]. Other people's comments
- * stay read-only.
- *
- * The composer is its own form so pressing Enter here does not save the
- * ticket fields above it.
  */
 
 import { useEffect, useState, type FormEvent } from "react";
@@ -146,33 +135,39 @@ export function CommentThread({
   }
 
   return (
-    <section className="mt-6 border-t border-gray-200 pt-4" aria-label="Comments">
-      <h3 className="text-xs font-medium text-gray-500">Comments</h3>
+    <section
+      className="mt-6 border-t border-black/[0.06] dark:border-white/[0.06] pt-4"
+      aria-label="Comments"
+    >
+      <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400">Comments</h3>
 
       {loading ? (
-        <p className="mt-3 text-sm text-gray-400">Loading comments…</p>
+        <p className="mt-3 text-sm text-gray-400 dark:text-gray-600">Loading comments…</p>
       ) : comments.length === 0 ? (
-        <p className="mt-3 text-sm text-gray-400">No comments yet.</p>
+        <p className="mt-3 text-sm text-gray-400 dark:text-gray-600">No comments yet.</p>
       ) : (
         <ol className="mt-3 space-y-3">
           {comments.map((comment) => (
             <li key={comment.id} className="flex gap-2">
               {comment.author.image ? (
-                // Remote avatars (Google). next/image needs a remotePatterns allow-list.
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={comment.author.image}
                   alt=""
-                  className="mt-0.5 h-6 w-6 shrink-0 rounded-full bg-gray-100"
+                  className="mt-0.5 h-6 w-6 shrink-0 rounded-full bg-gray-100 dark:bg-zinc-800"
                 />
               ) : (
-                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-200 text-[10px] font-medium text-gray-700">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full
+                                 bg-gray-200 dark:bg-zinc-700
+                                 text-[10px] font-medium text-gray-700 dark:text-gray-300">
                   {initials(comment.author.name)}
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-gray-500">
-                  <span className="font-medium text-gray-700">{comment.author.name}</span>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="font-medium text-gray-700 dark:text-gray-300">
+                    {comment.author.name}
+                  </span>
                   {" · "}
                   <time dateTime={comment.createdAt}>{formatWhen(comment.createdAt)}</time>
                 </p>
@@ -185,11 +180,11 @@ export function CommentThread({
                         onChange={(event) => setEditBody(event.target.value)}
                         rows={3}
                         maxLength={10_000}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                        className="glass-input w-full"
                       />
                     </label>
                     {error ? (
-                      <p role="alert" className="mt-2 text-sm text-red-600">
+                      <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
                         {error}
                       </p>
                     ) : null}
@@ -197,7 +192,7 @@ export function CommentThread({
                       <button
                         type="submit"
                         disabled={savingEdit || editBody.trim().length === 0}
-                        className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300"
+                        className="btn-primary !px-3 !py-1.5"
                       >
                         {savingEdit ? "Saving…" : "Save"}
                       </button>
@@ -205,7 +200,7 @@ export function CommentThread({
                         type="button"
                         onClick={() => setEditingId(null)}
                         disabled={savingEdit}
-                        className="rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
+                        className="btn-ghost"
                       >
                         Cancel
                       </button>
@@ -213,12 +208,15 @@ export function CommentThread({
                   </form>
                 ) : (
                   <>
-                    <p className="mt-0.5 whitespace-pre-wrap text-sm text-gray-900">{comment.body}</p>
+                    <p className="mt-0.5 whitespace-pre-wrap text-sm text-gray-900 dark:text-gray-100">
+                      {comment.body}
+                    </p>
                     {comment.author.id === currentUserId ? (
                       <button
                         type="button"
                         onClick={() => startEdit(comment)}
-                        className="mt-1 text-xs text-gray-500 hover:text-gray-800"
+                        className="mt-1 text-xs text-gray-500 dark:text-gray-400
+                                   hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
                       >
                         Edit
                       </button>
@@ -239,19 +237,19 @@ export function CommentThread({
             onChange={(event) => setDraft(event.target.value)}
             rows={3}
             maxLength={10_000}
-            placeholder="Write a comment"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+            placeholder="Write a comment…"
+            className="glass-input w-full"
           />
         </label>
         {error && editingId === null ? (
-          <p role="alert" className="mt-2 text-sm text-red-600">
+          <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
             {error}
           </p>
         ) : null}
         <button
           type="submit"
           disabled={posting || draft.trim().length === 0}
-          className="mt-2 rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300"
+          className="btn-primary mt-2 !px-3 !py-1.5"
         >
           {posting ? "Posting…" : "Comment"}
         </button>

@@ -105,7 +105,9 @@ export function middleware(req: NextRequest) {
 
   if (!hasSessionCookie(req)) {
     const signInUrl = new URL("/sign-in", nextUrl.origin);
-    signInUrl.searchParams.set("callbackUrl", pathname);
+    // Keep the query string. An invite link is /invite/accept?token=...
+    // and the token is the only thing that page can verify.
+    signInUrl.searchParams.set("callbackUrl", `${pathname}${nextUrl.search}`);
     return NextResponse.redirect(signInUrl);
   }
 
