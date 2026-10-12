@@ -32,10 +32,14 @@ export function AppHeader({
     <header className="glass-header sticky top-0 z-30 flex items-center justify-between px-6 py-3">
       <Link
         href="/"
-        className="text-sm font-semibold tracking-tight text-gray-900 dark:text-gray-100
-                   hover:opacity-70 transition-opacity duration-150"
+        className="flex items-center gap-2 hover:opacity-70 transition-opacity duration-150"
       >
-        Ticksy
+        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-orange-600 dark:bg-orange-500 shadow-sm">
+          <span className="text-[9px] font-bold text-white">T</span>
+        </div>
+        <span className="text-sm font-semibold tracking-tight text-gray-900 dark:text-gray-100">
+          Ticksy
+        </span>
       </Link>
 
       <div className="flex items-center gap-2">

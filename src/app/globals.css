@@ -6,14 +6,15 @@
 @layer base {
   :root {
     color-scheme: light;
-    --page-bg: #ffffff;
-    --surface: rgba(255, 255, 255, 0.78);
-    --surface-border: rgba(0, 0, 0, 0.08);
-    --surface-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-    --header-bg: rgba(255, 255, 255, 0.88);
-    --input-bg: rgba(255, 255, 255, 0.8);
-    --input-border: rgba(0, 0, 0, 0.14);
-    --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+    /* Warm off-white / creamish base */
+    --page-bg: #faf7f2;
+    --surface: rgba(250, 246, 240, 0.80);
+    --surface-border: rgba(0, 0, 0, 0.07);
+    --surface-shadow: 0 2px 16px rgba(0, 0, 0, 0.05);
+    --header-bg: rgba(250, 246, 240, 0.92);
+    --input-bg: rgba(250, 246, 240, 0.85);
+    --input-border: rgba(0, 0, 0, 0.12);
+    --scrollbar-thumb: rgba(0, 0, 0, 0.13);
   }
 
   .dark {
@@ -82,15 +83,15 @@
     -webkit-backdrop-filter: blur(8px);
     @apply text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2 text-sm
            placeholder:text-gray-400 dark:placeholder:text-gray-600
-           focus:outline-none focus:ring-2 focus:ring-gray-900/15 dark:focus:ring-white/15
+           focus:outline-none focus:ring-2 focus:ring-orange-500/25 dark:focus:ring-orange-400/25
            transition-[box-shadow,border-color] duration-150;
   }
 
   /* Primary action button */
   .btn-primary {
-    @apply bg-gray-900 dark:bg-white text-white dark:text-gray-900
-           hover:bg-gray-700 dark:hover:bg-gray-100
-           disabled:bg-gray-300 dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400
+    @apply bg-orange-600 dark:bg-orange-500 text-white
+           hover:bg-orange-700 dark:hover:bg-orange-600
+           disabled:bg-stone-300 dark:disabled:bg-stone-700 dark:disabled:text-stone-400
            disabled:cursor-not-allowed
            font-medium rounded-lg px-4 py-2 text-sm transition-colors duration-150;
   }
@@ -101,4 +102,43 @@
            hover:bg-black/[0.06] dark:hover:bg-white/[0.08]
            rounded-md px-2 py-1 text-sm transition-colors duration-150;
   }
+
+  /* ─── Landing page: animated background orbs ─── */
+  .landing-blob {
+    animation: landing-drift 12s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  /* ─── Landing page: gradient text ─── */
+  /* Light mode: deeper burnt-orange → amber (contrast on cream bg) */
+  .landing-gradient-text {
+    background: linear-gradient(135deg, #c2410c 0%, #b45309 50%, #92400e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  /* Dark mode: vivid bright orange → golden amber */
+  .dark .landing-gradient-text {
+    background: linear-gradient(135deg, #fb923c 0%, #fbbf24 50%, #f97316 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* ─── Landing page: fade-in on load ─── */
+  .landing-fade-in {
+    animation: landing-fade 0.6s ease both;
+  }
+}
+
+/* ─── Keyframe definitions (outside @layer so they're always emitted) ─── */
+@keyframes landing-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(30px, -20px) scale(1.04); }
+  66%       { transform: translate(-20px, 15px) scale(0.97); }
+}
+
+@keyframes landing-fade {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

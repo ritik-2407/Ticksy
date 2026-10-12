@@ -168,8 +168,8 @@ export function Board({
               {workspaceName}
             </h1>
             <span className="text-sm text-gray-400 dark:text-gray-500">/{slug}</span>
-            <span className="rounded-full bg-gray-900/8 dark:bg-white/10 px-2.5 py-1
-                             text-xs font-medium text-gray-700 dark:text-gray-300">
+            <span className="rounded-full bg-orange-500/10 dark:bg-orange-400/10 px-2.5 py-1
+                             text-xs font-medium text-orange-700 dark:text-orange-400">
               {role === "ADMIN" ? "Admin" : "Member"}
             </span>
           </div>
@@ -186,7 +186,7 @@ export function Board({
 
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-3 border-b border-black/[0.06] dark:border-white/[0.06]
-                      bg-white/40 dark:bg-white/[0.02] backdrop-blur-sm px-6 py-3">
+                      bg-[#faf7f2]/60 dark:bg-white/[0.02] backdrop-blur-sm px-6 py-3">
         <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
           <span>Priority</span>
           <select
@@ -260,23 +260,29 @@ export function Board({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <main className="flex flex-1 gap-4 overflow-x-auto p-6">
-          {BOARD_COLUMNS.map((column) => (
-            <Column
-              key={column.status}
-              status={column.status}
-              title={column.title}
-              tickets={groups.get(column.status) ?? []}
-              pendingId={pendingId}
-              didDrag={didDrag}
-              onOpen={setOpenTicketId}
-            />
-          ))}
-        </main>
+        {/* Glass board container */}
+        <div className="flex flex-1 flex-col overflow-hidden px-5 pb-5 pt-3">
+          <div className="glass flex flex-1 overflow-hidden rounded-2xl
+                          shadow-[0_8px_40px_rgba(0,0,0,0.07)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.45)]">
+            <main className="flex flex-1 divide-x divide-black/[0.05] dark:divide-white/[0.05] overflow-x-auto">
+              {BOARD_COLUMNS.map((column) => (
+                <Column
+                  key={column.status}
+                  status={column.status}
+                  title={column.title}
+                  tickets={groups.get(column.status) ?? []}
+                  pendingId={pendingId}
+                  didDrag={didDrag}
+                  onOpen={setOpenTicketId}
+                />
+              ))}
+            </main>
+          </div>
+        </div>
 
         <DragOverlay>
           {activeTicket ? (
-            <div className="w-72 rotate-1 scale-105 opacity-95">
+            <div className="w-64 rotate-1 scale-105 opacity-95">
               <TicketCard ticket={activeTicket} />
             </div>
           ) : null}

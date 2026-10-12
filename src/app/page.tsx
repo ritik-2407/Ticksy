@@ -10,6 +10,7 @@ import prisma from "@/lib/prisma";
 import { Priority, TicketStatus } from "@prisma/client";
 import { PRIORITIES } from "@/components/kanban/columns";
 import Link from "next/link";
+import { LandingPage } from "@/components/landing/LandingPage";
 
 const EMPTY_COUNTS: Record<TicketStatus, number> = {
   OPEN: 0,
@@ -25,17 +26,18 @@ const EMPTY_PRIORITY: Record<Priority, number> = {
   CRITICAL: 0,
 };
 
+// Orange saturation ladder — lightest → full accent as work progresses
 const BAR_COLOR: Record<TicketStatus, string> = {
-  OPEN: "bg-gray-300 dark:bg-zinc-600",
-  IN_PROGRESS: "bg-blue-400 dark:bg-blue-500",
-  IN_REVIEW: "bg-amber-400 dark:bg-amber-500",
-  DONE: "bg-emerald-500 dark:bg-emerald-500",
+  OPEN:        "bg-orange-200    dark:bg-orange-900/40",
+  IN_PROGRESS: "bg-orange-300    dark:bg-orange-700/60",
+  IN_REVIEW:   "bg-orange-400    dark:bg-orange-600/80",
+  DONE:        "bg-orange-600    dark:bg-orange-500",
 };
 
 export default async function Home() {
   const session = await auth();
   if (!session?.user?.id) {
-    return <Landing />;
+    return <LandingPage />;
   }
 
   const name = session.user.name?.trim() || "You";
@@ -95,18 +97,33 @@ export default async function Home() {
   const done = totals.DONE;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <div className="min-h-screen bg-[#faf7f2] dark:bg-zinc-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+      {/* Background blobs — same aesthetic as the landing page */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
+        <div className="landing-blob absolute -top-48 -left-24 h-[560px] w-[560px] rounded-full bg-orange-200/30 dark:bg-orange-900/15 blur-3xl" style={{ animationDelay: "0s" }} />
+        <div className="landing-blob absolute -top-24 right-0 h-[400px] w-[400px] rounded-full bg-amber-200/25 dark:bg-amber-900/10 blur-3xl" style={{ animationDelay: "2s" }} />
+        <div className="landing-blob absolute bottom-0 left-1/2 h-[400px] w-[500px] -translate-x-1/2 rounded-full bg-orange-100/20 dark:bg-orange-950/15 blur-3xl" style={{ animationDelay: "4s" }} />
+      </div>
+
       <AppHeader name={name} email={session.user.email} image={session.user.image} />
 
-      <main className="mx-auto max-w-5xl px-6 py-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
-          Workspaces
-        </h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Boards you belong to. Open one to see its tickets.
-        </p>
+      <main className="mx-auto max-w-5xl px-6 py-10">
+        {/* Personalised greeting */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
+            Hey,{" "}
+            <span className="landing-gradient-text">
+              {name.split(" ")[0]}
+            </span>
+          </h1>
+          <p className="mt-1 text-sm text-stone-400 dark:text-stone-600">
+            {memberships.length === 0
+              ? "Create your first workspace to get started."
+              : `${memberships.length} workspace${memberships.length !== 1 ? "s" : ""} · ${ticketTotal} ticket${ticketTotal !== 1 ? "s" : ""}`}
+          </p>
+        </div>
 
-        <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="Workspaces" value={memberships.length} />
           <Stat label="Tickets" value={ticketTotal} />
           <Stat label="Still open" value={ticketTotal - done} />
@@ -114,8 +131,8 @@ export default async function Home() {
         </section>
 
         {ticketTotal > 0 ? (
-          <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
-            {done} of {ticketTotal} tickets are done.
+          <p className="mt-2.5 text-xs text-stone-400 dark:text-stone-600">
+            {done} of {ticketTotal} done
             {" · "}
             {PRIORITIES.map((item) =>
               `${priorityTotals[item.priority]} ${item.title.toLowerCase()}`
@@ -126,8 +143,8 @@ export default async function Home() {
         <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <section className="space-y-3">
             {memberships.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-gray-200 dark:border-white/10
-                              bg-white/50 dark:bg-white/[0.02] px-6 py-12 text-center">
+              <div className="rounded-2xl border border-dashed border-stone-200 dark:border-white/10
+                              bg-[#faf7f2]/60 dark:bg-white/[0.02] px-6 py-12 text-center">
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   No workspaces yet
                 </p>
@@ -162,8 +179,8 @@ export default async function Home() {
                           /{workspace.slug}
                         </p>
                       </div>
-                      <span className="rounded-full bg-gray-900/8 dark:bg-white/10
-                                       px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <span className="rounded-full bg-orange-500/10 dark:bg-orange-400/10
+                                       px-2.5 py-1 text-xs font-medium text-orange-700 dark:text-orange-400">
                         {membership.role === "ADMIN" ? "Admin" : "Member"}
                       </span>
                     </div>
@@ -246,34 +263,3 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function Landing() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center
-                     bg-white dark:bg-zinc-950 px-6 text-center
-                     text-gray-900 dark:text-gray-100 transition-colors duration-300">
-      {/* Decorative blobs */}
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
-        <div className="absolute -top-32 left-1/4 h-96 w-96 rounded-full
-                        bg-blue-100/50 dark:bg-blue-950/40 blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 h-96 w-96 rounded-full
-                        bg-violet-100/50 dark:bg-violet-950/40 blur-3xl" />
-      </div>
-
-      <p className="text-sm font-semibold tracking-tight text-gray-900 dark:text-gray-100">
-        Ticksy
-      </p>
-      <h1 className="mt-3 max-w-md text-4xl font-semibold tracking-tight">
-        A board for the work your team is actually doing
-      </h1>
-      <p className="mt-4 max-w-md text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-        Sign in, create a workspace, and file tickets onto a four-column board.
-      </p>
-      <Link
-        href="/sign-in"
-        className="btn-primary mt-8 inline-block !px-5 !py-2.5"
-      >
-        Sign in with Google
-      </Link>
-    </main>
-  );
-}

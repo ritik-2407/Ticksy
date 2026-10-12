@@ -78,8 +78,8 @@ export function MembersScreen({
           <div className="flex items-baseline gap-3">
             <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100">{workspaceName}</h1>
             <span className="text-sm text-gray-400 dark:text-gray-500">/{slug}</span>
-            <span className="rounded-full bg-gray-900/8 dark:bg-white/10
-                             px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300">
+            <span className="rounded-full bg-orange-500/10 dark:bg-orange-400/10
+                             px-2.5 py-1 text-xs font-medium text-orange-700 dark:text-orange-400">
               {isAdmin ? "Admin" : "Member"}
             </span>
           </div>

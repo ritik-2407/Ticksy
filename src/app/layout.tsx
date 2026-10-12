@@ -7,22 +7,6 @@ export const metadata: Metadata = {
   description: "Team issue tracker",
 };
 
-/**
- * The inline script runs synchronously before first paint to apply the
- * saved theme class. This prevents flash-of-wrong-theme (FOUC) on reload.
- */
-const themeScript = `
-(function(){
-  try {
-    var t = localStorage.getItem('ticksy-theme');
-    var m = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (t === 'dark' || (!t && m)) {
-      document.documentElement.classList.add('dark');
-    }
-  } catch(e) {}
-})();
-`.trim();
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,11 +14,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* Anti-FOUC script — must run before React hydrates */}
-        {/* eslint-disable-next-line @next/next/no-script-component-in-head */}
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
       <body>
         <ThemeProvider>{children}</ThemeProvider>
       </body>

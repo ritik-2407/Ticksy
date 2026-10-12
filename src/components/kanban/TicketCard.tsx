@@ -1,10 +1,11 @@
 import type { TicketCard as Ticket } from "@/lib/ticket";
 
+// Monotone stone badges — saturation increases with urgency, no hue shifts
 const PRIORITY_STYLE: Record<Ticket["priority"], string> = {
-  LOW: "bg-gray-100 dark:bg-white/8 text-gray-600 dark:text-gray-400",
-  MEDIUM: "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400",
-  HIGH: "bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-400",
-  CRITICAL: "bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-400",
+  LOW:      "bg-stone-100/70  dark:bg-white/[0.04] text-stone-400 dark:text-stone-600",
+  MEDIUM:   "bg-stone-100     dark:bg-white/[0.06] text-stone-500 dark:text-stone-500",
+  HIGH:     "bg-stone-200/70  dark:bg-white/[0.09] text-stone-600 dark:text-stone-400",
+  CRITICAL: "bg-stone-200     dark:bg-white/[0.13] text-stone-700 dark:text-stone-300 font-semibold",
 };
 
 function initials(name: string): string {
@@ -21,8 +22,10 @@ export function TicketCard({ ticket }: { ticket: Ticket }) {
 
   return (
     <article
-      className="glass rounded-xl p-3
-                 hover:shadow-[0_4px_20px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_4px_20px_rgba(0,0,0,0.5)]
+      className="rounded-xl border border-black/[0.06] dark:border-white/[0.07]
+                 bg-[#fdf9f4] dark:bg-white/[0.04]
+                 p-3 shadow-sm
+                 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(0,0,0,0.09)] dark:hover:shadow-[0_4px_20px_rgba(0,0,0,0.5)]
                  transition-all duration-150 cursor-pointer"
     >
       <div className="flex items-start justify-between gap-2">
@@ -47,16 +50,11 @@ export function TicketCard({ ticket }: { ticket: Ticket }) {
           {ticket.labels.map((label) => (
             <li
               key={label.id}
-              className="inline-flex items-center gap-1 rounded-full
-                         bg-black/[0.04] dark:bg-white/[0.08]
-                         border border-black/[0.06] dark:border-white/[0.08]
-                         px-1.5 py-0.5 text-[10px] text-gray-600 dark:text-gray-400"
+              className="rounded-md border border-black/[0.07] dark:border-white/[0.08]
+                         bg-black/[0.04] dark:bg-white/[0.05]
+                         px-1.5 py-0.5 text-[10px] font-medium tracking-wide
+                         text-stone-400 dark:text-stone-500"
             >
-              <span
-                className="h-1.5 w-1.5 rounded-full"
-                style={{ backgroundColor: label.color }}
-                aria-hidden
-              />
               {label.name}
             </li>
           ))}

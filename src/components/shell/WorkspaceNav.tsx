@@ -45,8 +45,8 @@ function NavLink({
       aria-current={active ? "page" : undefined}
       className={`rounded-md px-2.5 py-1 text-sm transition-colors duration-150 ${
         active
-          ? "bg-gray-900/8 dark:bg-white/10 font-medium text-gray-900 dark:text-gray-100"
-          : "text-gray-500 dark:text-gray-400 hover:bg-gray-900/5 dark:hover:bg-white/5"
+          ? "bg-orange-500/10 dark:bg-orange-400/10 font-medium text-orange-700 dark:text-orange-400"
+          : "text-gray-500 dark:text-gray-400 hover:bg-orange-500/5 dark:hover:bg-orange-400/5"
       }`}
     >
       {children}

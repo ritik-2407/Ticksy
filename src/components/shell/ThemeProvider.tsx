@@ -6,11 +6,25 @@
  * - Writes the `dark` class onto <html> for Tailwind's `darkMode: "class"`.
  * - Exposes { theme, toggle } via context for any client component to use.
  *
- * NOTE: A tiny inline script in layout.tsx sets the class synchronously
- * before the first paint, preventing flash-of-wrong-theme (FOUC).
+ * The blocking script is inserted into <head> via useServerInsertedHTML so
+ * the browser runs it while parsing HTML, before first paint. It is not part
+ * of the React tree, so the client renderer never tries to execute a <script>.
  */
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { useServerInsertedHTML } from "next/navigation";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+
+const themeScript = `
+(function(){
+  try {
+    var t = localStorage.getItem('ticksy-theme');
+    var m = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (t === 'dark' || (!t && m)) {
+      document.documentElement.classList.add('dark');
+    }
+  } catch(e) {}
+})();
+`.trim();
 
 type Theme = "light" | "dark";
 
@@ -25,6 +39,17 @@ const ThemeContext = createContext<ThemeContextValue>({
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  // Next flushes server-inserted HTML on every stream chunk. Emit the
+  // blocking script once; later flushes must return nothing.
+  const hasInsertedThemeScript = useRef(false);
+  useServerInsertedHTML(() => {
+    if (hasInsertedThemeScript.current) return null;
+    hasInsertedThemeScript.current = true;
+    return (
+      <script id="ticksy-theme" dangerouslySetInnerHTML={{ __html: themeScript }} />
+    );
+  });
+
   // Start with "light" — the FOUC script already applied the right class
   // before hydration, so there is no visible flicker.
   const [theme, setTheme] = useState<Theme>("light");

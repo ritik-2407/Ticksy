@@ -10,15 +10,15 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950
+    <div className="min-h-screen bg-[#faf7f2] dark:bg-zinc-950
                     flex flex-col items-center justify-center px-4
                     transition-colors duration-300">
       {/* Decorative background blobs */}
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
         <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full
-                        bg-blue-100/40 dark:bg-blue-950/30 blur-3xl" />
+                        bg-orange-100/40 dark:bg-orange-950/25 blur-3xl" />
         <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full
-                        bg-violet-100/40 dark:bg-violet-950/30 blur-3xl" />
+                        bg-amber-100/40 dark:bg-amber-950/20 blur-3xl" />
       </div>
 
       {/* Brand mark */}
