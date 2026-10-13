@@ -6,7 +6,6 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { WorkspaceNav } from "@/components/shell/WorkspaceNav";
 
 type Label = { id: string; name: string; color: string };
 
@@ -27,12 +26,11 @@ export function WorkspaceSettings({
         <div className="flex items-baseline gap-3">
           <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100">{workspaceName}</h1>
           <span className="text-sm text-gray-400 dark:text-gray-500">/{slug}</span>
-          <span className="rounded-full bg-orange-500/10 dark:bg-orange-400/10
-                           px-2.5 py-1 text-xs font-medium text-orange-700 dark:text-orange-400">
-            Admin
+          <span className="rounded-full bg-amber-600/10 dark:bg-amber-400/10
+                           px-2.5 py-1 text-xs font-medium">
+            <span className="gold-text">Admin</span>
           </span>
         </div>
-        <WorkspaceNav slug={slug} current="settings" showSettings />
       </header>
 
       <main className="mx-auto w-full max-w-3xl flex-1 space-y-8 px-6 py-6">
@@ -281,8 +279,7 @@ function LabelCatalog({ slug, labels: initialLabels }: { slug: string; labels: L
                         type="button"
                         disabled={busy}
                         onClick={() => void remove(label.id)}
-                        className="text-sm font-medium text-red-700 dark:text-red-400
-                                   disabled:text-red-300 dark:disabled:text-red-800 transition-colors"
+                        className="btn-danger !px-2.5 !py-1"
                       >
                         {busy ? "Deleting…" : "Delete"}
                       </button>
@@ -416,10 +413,7 @@ function DeleteWorkspace({ slug }: { slug: string }) {
         <button
           type="submit"
           disabled={deleting || confirm !== slug}
-          className="rounded-lg bg-red-700 dark:bg-red-800 px-3 py-2 text-sm font-medium text-white
-                     hover:bg-red-800 dark:hover:bg-red-700
-                     disabled:cursor-not-allowed disabled:bg-red-200 dark:disabled:bg-red-950/50
-                     dark:disabled:text-red-800 transition-colors"
+          className="btn-danger !px-4 !py-2"
         >
           {deleting ? "Deleting…" : "Delete workspace"}
         </button>

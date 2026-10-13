@@ -26,12 +26,13 @@ const EMPTY_PRIORITY: Record<Priority, number> = {
   CRITICAL: 0,
 };
 
-// Orange saturation ladder — lightest → full accent as work progresses
+// Solid gold saturation ladder — lightest → full accent as work progresses.
+// Solid (not gradient) so adjacent segments stay distinguishable.
 const BAR_COLOR: Record<TicketStatus, string> = {
-  OPEN:        "bg-orange-200    dark:bg-orange-900/40",
-  IN_PROGRESS: "bg-orange-300    dark:bg-orange-700/60",
-  IN_REVIEW:   "bg-orange-400    dark:bg-orange-600/80",
-  DONE:        "bg-orange-600    dark:bg-orange-500",
+  OPEN:        "bg-amber-200 dark:bg-amber-900/40",
+  IN_PROGRESS: "bg-amber-300 dark:bg-amber-700/60",
+  IN_REVIEW:   "bg-amber-500 dark:bg-amber-500/80",
+  DONE:        "bg-amber-700 dark:bg-amber-400",
 };
 
 export default async function Home() {
@@ -179,9 +180,11 @@ export default async function Home() {
                           /{workspace.slug}
                         </p>
                       </div>
-                      <span className="rounded-full bg-orange-500/10 dark:bg-orange-400/10
-                                       px-2.5 py-1 text-xs font-medium text-orange-700 dark:text-orange-400">
-                        {membership.role === "ADMIN" ? "Admin" : "Member"}
+                      <span className="rounded-full bg-amber-600/10 dark:bg-amber-400/10
+                                       px-2.5 py-1 text-xs font-medium">
+                        <span className="gold-text">
+                          {membership.role === "ADMIN" ? "Admin" : "Member"}
+                        </span>
                       </span>
                     </div>
 

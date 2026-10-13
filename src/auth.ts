@@ -23,6 +23,7 @@
 
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import GitHub from "next-auth/providers/github";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 
@@ -33,11 +34,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
 
   // ── Providers ────────────────────────────────────────────────────────────
-  // One provider for now. Add more (GitHub, Email magic-link, etc.) here later.
+  // OAuth providers. Add/remove here; each one automatically gets a button
+  // on our custom sign-in page (/sign-in).
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      // Both Google and GitHub verify email addresses, so it is safe to merge
+      // accounts that share the same email across providers.
+      allowDangerousEmailAccountLinking: true,
+    }),
+    GitHub({
+      clientId: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      allowDangerousEmailAccountLinking: true,
     }),
   ],
 

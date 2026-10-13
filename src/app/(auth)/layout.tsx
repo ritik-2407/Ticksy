@@ -4,6 +4,8 @@
  * Auth pages need a centered card, no sidebar, no navbar.
  */
 
+import { LogoMark } from "@/components/shell/LogoMark";
+
 export default function AuthLayout({
   children,
 }: {
@@ -22,7 +24,8 @@ export default function AuthLayout({
       </div>
 
       {/* Brand mark */}
-      <div className="mb-8 text-center">
+      <div className="mb-8 flex flex-col items-center text-center">
+        <LogoMark size={56} className="mb-4 !shadow-md" />
         <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
           Ticksy
         </h1>

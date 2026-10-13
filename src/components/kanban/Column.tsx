@@ -32,7 +32,7 @@ export function Column({
       {/* Column header */}
       <header className="flex items-center justify-center px-4 py-3
                          border-b border-black/[0.05] dark:border-white/[0.05]">
-        <h2 className="text-xs font-bold uppercase tracking-widest text-orange-600 dark:text-orange-500">
+        <h2 className="gold-text text-xs font-bold uppercase tracking-widest">
           {title}
         </h2>
       </header>

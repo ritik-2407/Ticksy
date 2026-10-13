@@ -6,7 +6,6 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { WorkspaceNav } from "@/components/shell/WorkspaceNav";
 import type { Role } from "@prisma/client";
 
 export type MemberRow = {
@@ -74,16 +73,13 @@ export function MembersScreen({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="glass-header flex flex-wrap items-center justify-between gap-3 px-6 py-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100">{workspaceName}</h1>
-            <span className="text-sm text-gray-400 dark:text-gray-500">/{slug}</span>
-            <span className="rounded-full bg-orange-500/10 dark:bg-orange-400/10
-                             px-2.5 py-1 text-xs font-medium text-orange-700 dark:text-orange-400">
-              {isAdmin ? "Admin" : "Member"}
-            </span>
-          </div>
-          <WorkspaceNav slug={slug} current="members" showSettings={isAdmin} />
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100">{workspaceName}</h1>
+          <span className="text-sm text-gray-400 dark:text-gray-500">/{slug}</span>
+          <span className="rounded-full bg-amber-600/10 dark:bg-amber-400/10
+                           px-2.5 py-1 text-xs font-medium">
+            <span className="gold-text">{isAdmin ? "Admin" : "Member"}</span>
+          </span>
         </div>
         {isAdmin ? (
           <button

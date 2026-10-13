@@ -260,11 +260,7 @@ export function DetailDrawer({
                     type="button"
                     onClick={() => void remove()}
                     disabled={deleting}
-                    className="rounded-md px-2 py-1 text-sm font-medium
-                               text-red-700 dark:text-red-400
-                               hover:bg-red-50 dark:hover:bg-red-950/40
-                               disabled:text-red-300 dark:disabled:text-red-800
-                               transition-colors"
+                    className="btn-danger"
                   >
                     {deleting ? "Deleting…" : "Delete"}
                   </button>
@@ -277,7 +273,7 @@ export function DetailDrawer({
                   setConfirmDelete(true);
                   setError(null);
                 }}
-                className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+                className="btn-danger-outline w-full"
               >
                 Delete ticket
               </button>

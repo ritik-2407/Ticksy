@@ -5,9 +5,21 @@
 
 import { AppHeader } from "@/components/shell/AppHeader";
 import { auth } from "@/auth";
+import prisma from "@/lib/prisma";
+import { headers } from "next/headers";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
+  const slug = (await headers()).get("x-workspace-slug");
+
+  let showSettings = false;
+  if (slug && session?.user?.id) {
+    const membership = await prisma.membership.findFirst({
+      where: { userId: session.user.id, workspace: { slug } },
+      select: { role: true },
+    });
+    showSettings = membership?.role === "ADMIN";
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-[#faf7f2] dark:bg-zinc-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
@@ -23,6 +35,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           name={session.user.name?.trim() || "You"}
           email={session.user.email}
           image={session.user.image}
+          slug={slug}
+          showSettings={showSettings}
         />
       ) : null}
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>

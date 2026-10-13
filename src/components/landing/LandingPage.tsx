@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LogoMark } from "@/components/shell/LogoMark";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 
 // ─── SVG Icon components ────────────────────────────────────────────────────
@@ -71,13 +72,10 @@ function ShieldIcon() {
     </svg>
   );
 }
-function GoogleIcon() {
+function SparkleIcon() {
   return (
-    <svg width="17" height="17" viewBox="0 0 18 18" aria-hidden>
-      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4" />
-      <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853" />
-      <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05" />
-      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335" />
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z" />
     </svg>
   );
 }
@@ -157,9 +155,9 @@ const PRIORITY_BADGE: Record<string, string> = {
 const STEPS = [
   {
     num: "01",
-    title: "Sign in with Google",
+    title: "Sign in",
     description:
-      "One click and you are in. No passwords to manage, no email confirmation hoops to jump through.",
+      "One click and you are in. Use Google or GitHub — no passwords to manage, no email confirmation hoops to jump through.",
   },
   {
     num: "02",
@@ -201,9 +199,7 @@ function LandingNav() {
       <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-600 dark:bg-orange-500 shadow-sm">
-            <span className="text-[11px] font-bold text-white">T</span>
-          </div>
+          <LogoMark size={28} />
           <span className="text-sm font-semibold tracking-tight text-gray-900 dark:text-gray-100">
             Ticksy
           </span>
@@ -227,7 +223,7 @@ function LandingNav() {
           <ThemeToggle />
           <Link
             href="/sign-in"
-            className="btn-primary !py-1.5 !px-4 !text-xs"
+            className="gold-surface rounded-lg px-4 py-1.5 text-xs font-semibold shadow-sm hover:shadow-md"
           >
             Sign in
           </Link>
@@ -255,16 +251,15 @@ function HeroSection() {
       <div className="landing-fade-in mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row" style={{ animationDelay: "180ms" }}>
         <Link
           href="/sign-in"
-          className="inline-flex items-center gap-2 rounded-xl bg-orange-600 dark:bg-orange-500 px-6 py-3 text-sm font-semibold text-white shadow-lg hover:bg-orange-700 dark:hover:bg-orange-600 transition-all duration-150 hover:-translate-y-0.5"
+          className="gold-surface inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold shadow-lg hover:-translate-y-0.5"
         >
-          <GoogleIcon />
-          Continue with Google
+          Get started
         </Link>
         <a
-          href="#board"
+          href="#how-it-works"
           className="inline-flex items-center gap-1.5 rounded-xl border border-black/[0.1] dark:border-white/10 bg-[#faf7f2]/70 dark:bg-white/5 backdrop-blur-sm px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-[#faf7f2]/90 dark:hover:bg-white/10 transition-all duration-150"
         >
-          See the board <ArrowRightIcon />
+          How it works <ArrowRightIcon />
         </a>
       </div>
 
@@ -324,9 +319,7 @@ function KanbanPreview() {
         <div className="mt-14 glass overflow-hidden rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.10)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
           {/* App bar */}
           <div className="flex items-center gap-3 border-b border-black/[0.07] dark:border-white/[0.07] bg-white/40 dark:bg-white/[0.025] px-6 py-3.5">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-orange-600 dark:bg-orange-500">
-              <span className="text-[9px] font-bold text-white">T</span>
-            </div>
+            <LogoMark size={24} />
             <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Acme Corp</span>
             <span className="ml-auto text-xs text-gray-400 dark:text-gray-600">4 members · 9 tickets</span>
           </div>
@@ -440,9 +433,9 @@ function CTASection() {
         <div className="relative mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Link
             href="/sign-in"
-            className="inline-flex items-center gap-2 rounded-xl bg-orange-600 dark:bg-orange-500 px-7 py-3.5 text-sm font-semibold text-white shadow-xl hover:bg-orange-700 dark:hover:bg-orange-600 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-2xl"
+            className="gold-surface inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm font-semibold shadow-xl hover:-translate-y-0.5 hover:shadow-2xl"
           >
-            <GoogleIcon />
+            <SparkleIcon />
             Sign in for free
           </Link>
         </div>
@@ -459,9 +452,7 @@ function Footer() {
         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-orange-600 dark:bg-orange-500">
-              <span className="text-[9px] font-bold text-white">T</span>
-            </div>
+            <LogoMark size={24} />
             <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Ticksy</span>
           </div>
 

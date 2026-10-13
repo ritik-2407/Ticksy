@@ -29,7 +29,6 @@ import { Column } from "@/components/kanban/Column";
 import { DetailDrawer } from "@/components/kanban/DetailDrawer";
 import { NewTicketDialog } from "@/components/kanban/NewTicketDialog";
 import { TicketCard } from "@/components/kanban/TicketCard";
-import { WorkspaceNav } from "@/components/shell/WorkspaceNav";
 import {
   BOARD_COLUMNS,
   PRIORITIES,
@@ -162,18 +161,15 @@ export function Board({
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Board header */}
       <header className="glass-header flex flex-wrap items-center justify-between gap-3 px-6 py-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-              {workspaceName}
-            </h1>
-            <span className="text-sm text-gray-400 dark:text-gray-500">/{slug}</span>
-            <span className="rounded-full bg-orange-500/10 dark:bg-orange-400/10 px-2.5 py-1
-                             text-xs font-medium text-orange-700 dark:text-orange-400">
-              {role === "ADMIN" ? "Admin" : "Member"}
-            </span>
-          </div>
-          <WorkspaceNav slug={slug} current="board" showSettings={role === "ADMIN"} />
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+            {workspaceName}
+          </h1>
+          <span className="text-sm text-gray-400 dark:text-gray-500">/{slug}</span>
+          <span className="rounded-full bg-amber-600/10 dark:bg-amber-400/10 px-2.5 py-1
+                           text-xs font-medium">
+            <span className="gold-text">{role === "ADMIN" ? "Admin" : "Member"}</span>
+          </span>
         </div>
         <button
           type="button"
