@@ -131,9 +131,14 @@ export function proxy(req: NextRequest) {
  *   - _next/static  → bundled JS/CSS
  *   - _next/image   → image optimization responses
  *   - favicon.ico   → browser auto-request
+ *   - image files   → /public assets and metadata icons (logo.png, apple-icon.png…).
+ *                     They must load for signed-out visitors on the landing page;
+ *                     otherwise the session guard redirects them to /sign-in.
  *
  * Everything else (pages, API routes) goes through the proxy.
  */
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico)$).*)",
+  ],
 };
