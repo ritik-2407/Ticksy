@@ -7,23 +7,34 @@ import type { TicketCard as Ticket } from "@/lib/ticket";
 export function DraggableTicket({
   ticket,
   disabled,
+  locked,
   didDrag,
   onOpen,
 }: {
   ticket: Ticket;
+  /** A save for this ticket is in flight. */
   disabled: boolean;
+  /** The caller may not change this ticket's status, so it cannot be dragged. */
+  locked: boolean;
   didDrag: { current: boolean };
   onOpen: (ticketId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: ticket.id,
-    disabled,
+    disabled: disabled || locked,
   });
 
   return (
     <div
       ref={setNodeRef}
-      className={`touch-none ${disabled ? "cursor-wait opacity-60" : "cursor-grab active:cursor-grabbing"} ${isDragging ? "opacity-40" : ""}`}
+      title={locked ? "Only the assignee or an admin can move this ticket" : undefined}
+      className={`touch-none ${
+        disabled
+          ? "cursor-wait opacity-60"
+          : locked
+            ? "cursor-pointer"
+            : "cursor-grab active:cursor-grabbing"
+      } ${isDragging ? "opacity-40" : ""}`}
       {...listeners}
       {...attributes}
       onClick={() => {

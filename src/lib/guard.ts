@@ -29,6 +29,10 @@
  *     → requireTicket, then ADMIN. Used for DELETE /api/tickets/[id].
  *     → A non-member still gets 404. A member who is not an admin gets 403.
  *
+ * These guards answer "who are you in this workspace?". They do not decide
+ * which fields of a ticket you may edit. That depends on who owns the ticket
+ * and lives in lib/ticket-permissions.ts, called from PATCH /api/tickets/[id].
+ *
  * WHY throw a Response instead of returning null?
  *   If we returned null, every caller would need to write:
  *     const m = await requireMembership(slug, userId)

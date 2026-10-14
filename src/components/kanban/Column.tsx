@@ -10,6 +10,7 @@ export function Column({
   title,
   tickets,
   pendingId,
+  canMove,
   didDrag,
   onOpen,
 }: {
@@ -17,6 +18,7 @@ export function Column({
   title: string;
   tickets: TicketCard[];
   pendingId: string | null;
+  canMove: (ticket: TicketCard) => boolean;
   didDrag: { current: boolean };
   onOpen: (ticketId: string) => void;
 }) {
@@ -49,6 +51,7 @@ export function Column({
               key={ticket.id}
               ticket={ticket}
               disabled={pendingId === ticket.id}
+              locked={!canMove(ticket)}
               didDrag={didDrag}
               onOpen={onOpen}
             />

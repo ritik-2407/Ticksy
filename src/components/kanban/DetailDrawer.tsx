@@ -8,6 +8,9 @@
  * Labels are edited on their own, with the full labelIds set.
  * Admins can delete the ticket. Members cannot.
  *
+ * Status, priority and assignee follow lib/ticket-permissions.ts: fields the
+ * caller may not change are disabled. The API enforces the same rule.
+ *
  * Closing the panel drops unsaved ticket edits. The board only changes
  * after a successful save. A new comment updates the card's comment count.
  */
@@ -18,6 +21,7 @@ import { CommentThread } from "@/components/kanban/CommentThread";
 import { LabelEditor } from "@/components/kanban/LabelEditor";
 import { BOARD_COLUMNS } from "@/components/kanban/columns";
 import type { TicketCard as Ticket } from "@/lib/ticket";
+import { getTicketPermissions } from "@/lib/ticket-permissions";
 import type { Role } from "@prisma/client";
 
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
@@ -58,6 +62,18 @@ export function DetailDrawer({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  // Same policy the API enforces. Controls the caller may not use are
+  // disabled so they do not find out through a 403. Computed from the saved
+  // ticket, not the form: picking yourself as assignee does not unlock
+  // priority until that save lands.
+  const allowed = getTicketPermissions({
+    role,
+    userId: currentUserId,
+    assigneeId: ticket.assignee?.id ?? null,
+  });
+  const someLocked =
+    !allowed.canChangeStatus || !allowed.canChangePriority || !allowed.canChangeAssignee;
 
   const dirty =
     title !== ticket.title ||
@@ -186,7 +202,8 @@ export function DetailDrawer({
                 <select
                   value={status}
                   onChange={(event) => setStatus(event.target.value as Ticket["status"])}
-                  className="glass-input mt-1 w-full cursor-pointer"
+                  disabled={!allowed.canChangeStatus}
+                  className="glass-input mt-1 w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {BOARD_COLUMNS.map((column) => (
                     <option key={column.status} value={column.status}>
@@ -201,7 +218,8 @@ export function DetailDrawer({
                 <select
                   value={priority}
                   onChange={(event) => setPriority(event.target.value as Ticket["priority"])}
-                  className="glass-input mt-1 w-full cursor-pointer"
+                  disabled={!allowed.canChangePriority}
+                  className="glass-input mt-1 w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {PRIORITIES.map((level) => (
                     <option key={level} value={level}>
@@ -212,7 +230,20 @@ export function DetailDrawer({
               </label>
             </div>
 
-            <AssigneePicker slug={slug} value={assigneeId} onChange={setAssigneeId} />
+            <AssigneePicker
+              slug={slug}
+              value={assigneeId}
+              onChange={setAssigneeId}
+              disabled={!allowed.canChangeAssignee}
+            />
+
+            {someLocked ? (
+              <p className="text-xs text-gray-500 dark:text-gray-500">
+                {ticket.assignee
+                  ? `This ticket is assigned to ${ticket.assignee.name}. Only they or an admin can change its status, priority or assignee.`
+                  : "Only an admin or the assignee can change priority."}
+              </p>
+            ) : null}
 
             <p className="text-xs text-gray-400 dark:text-gray-600">
               Created by {ticket.createdBy.name}

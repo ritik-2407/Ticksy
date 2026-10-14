@@ -40,6 +40,7 @@ import {
   type PriorityFilter,
 } from "@/components/kanban/columns";
 import type { TicketCard as Ticket } from "@/lib/ticket";
+import { getTicketPermissions } from "@/lib/ticket-permissions";
 import type { Role } from "@prisma/client";
 
 const collisionDetection: CollisionDetection = (args) => {
@@ -86,6 +87,15 @@ export function Board({
   const activeTicket = tickets.find((ticket) => ticket.id === activeId) ?? null;
   const openTicket = tickets.find((ticket) => ticket.id === openTicketId) ?? null;
 
+  // Mirrors the API rule so a card you cannot move is not draggable at all.
+  function canMove(ticket: Ticket): boolean {
+    return getTicketPermissions({
+      role,
+      userId: currentUserId,
+      assigneeId: ticket.assignee?.id ?? null,
+    }).canChangeStatus;
+  }
+
   function handleDragStart(event: DragStartEvent) {
     didDrag.current = true;
     setActiveId(String(event.active.id));
@@ -108,6 +118,7 @@ export function Board({
     const ticketId = String(event.active.id);
     const ticket = tickets.find((item) => item.id === ticketId);
     if (!ticket || ticket.status === overId || pendingId === ticketId) return;
+    if (!canMove(ticket)) return;
 
     const previousStatus = ticket.status;
     setTickets((current) => moveTicket(current, ticketId, overId));
@@ -118,12 +129,17 @@ export function Board({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: overId }),
     })
-      .then((res) => {
-        if (!res.ok) throw new Error("status update failed");
+      .then(async (res) => {
+        if (res.ok) return;
+        // Show the server's reason (for example, the ticket was reassigned
+        // while this board was open) instead of a generic failure.
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? "status update failed");
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         setTickets((current) => moveTicket(current, ticketId, previousStatus));
-        setError("Could not save that move. The ticket was put back.");
+        const reason = err instanceof Error && err.message !== "status update failed" ? ` ${err.message}` : "";
+        setError(`Could not save that move. The ticket was put back.${reason}`);
       })
       .finally(() => {
         setPendingId((current) => (current === ticketId ? null : current));
@@ -268,6 +284,7 @@ export function Board({
                   title={column.title}
                   tickets={groups.get(column.status) ?? []}
                   pendingId={pendingId}
+                  canMove={canMove}
                   didDrag={didDrag}
                   onOpen={setOpenTicketId}
                 />

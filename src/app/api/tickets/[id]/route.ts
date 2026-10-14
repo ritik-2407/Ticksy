@@ -24,13 +24,21 @@
  * Every id must already exist in this workspace (create them with POST
  * /api/workspaces/[slug]/labels). A label from another workspace is rejected.
  *
+ * PERMISSIONS (PATCH). Any member may edit title, description and labels.
+ * status, priority and assigneeId follow the ownership rules in
+ * lib/ticket-permissions.ts: an unassigned ticket is open to every member,
+ * an assigned one can only be changed by its assignee or an admin, and
+ * priority is assignee or admin only. A field counts as changed only when it
+ * differs from the stored value, so resending the same status is fine.
+ *
  * Responses:
  *   200  { ticket }          — GET, PATCH
  *   200  { ok: true }        — DELETE
  *   400  { error, issues }   — empty body, bad enum, assignee, or foreign label
  *   401  { error }
- *   403  { error }           — DELETE by someone who is not an admin
+ *   403  { error }           — DELETE by a non-admin, or PATCH of a field you do not own
  *   404  { error }           — missing, or not in a workspace you belong to
+ *   409  { error }           — PATCH lost a race: the assignee changed under you
  *   500  { error }
  */
 
@@ -38,7 +46,8 @@ import { auth } from "@/auth";
 import { requireTicket, requireTicketAdmin } from "@/lib/guard";
 import prisma from "@/lib/prisma";
 import { ensureAssigneeIsMember, ensureLabelsInWorkspace, ticketSelect } from "@/lib/ticket";
-import { Prisma, Priority, TicketStatus } from "@prisma/client";
+import { assertCanEditTicket, changedRestrictedFields } from "@/lib/ticket-permissions";
+import { Prisma, Priority, type Role, TicketStatus } from "@prisma/client";
 import { z } from "zod";
 
 const PatchTicketSchema = z
@@ -125,8 +134,10 @@ export async function PATCH(
 
   let ticketId: string;
   let workspaceId: string;
+  let userId: string;
+  let role: Role;
   try {
-    ({ ticketId, workspaceId } = await authorize(params, session?.user?.id));
+    ({ ticketId, workspaceId, userId, role } = await authorize(params, session?.user?.id));
   } catch (res) {
     return res as Response;
   }
@@ -166,18 +177,53 @@ export async function PATCH(
   };
 
   try {
+    // Who may change status, priority and assignee depends on who owns the
+    // ticket right now. Read the current state, then apply the policy in
+    // lib/ticket-permissions.ts. Title, description and labels are open to
+    // every member and never reach this check.
+    const current = await prisma.ticket.findFirst({
+      where: { id: ticketId, workspaceId },
+      select: { assigneeId: true, status: true, priority: true },
+    });
+    if (!current) throw ticketNotFound();
+
+    assertCanEditTicket({
+      role,
+      userId,
+      current,
+      changes: { status, priority, assigneeId },
+    });
+
+    const restricted = changedRestrictedFields(current, { status, priority, assigneeId });
+    const touchesRestricted = restricted.status || restricted.priority || restricted.assignee;
+
     await ensureAssigneeIsMember(workspaceId, assigneeId);
     const nextLabelIds =
       labelIds === undefined ? undefined : await ensureLabelsInWorkspace(workspaceId, labelIds);
 
     await prisma.$transaction(async (tx) => {
       if (Object.keys(data).length > 0) {
-        // If the ticket vanished between the guard and this write, count is 0.
+        // The permission check above read the assignee. Someone else could
+        // reassign the ticket before this write lands (two members grabbing
+        // the same unassigned ticket). Pinning assigneeId in the WHERE makes
+        // the write fail instead of overriding them. Only done when a
+        // restricted field is changing, so a title edit never conflicts.
         const result = await tx.ticket.updateMany({
-          where: { id: ticketId, workspaceId },
+          where: {
+            id: ticketId,
+            workspaceId,
+            ...(touchesRestricted ? { assigneeId: current.assigneeId } : {}),
+          },
           data,
         });
-        if (result.count === 0) throw ticketNotFound();
+        if (result.count === 0) {
+          const stillThere = await tx.ticket.findFirst({
+            where: { id: ticketId, workspaceId },
+            select: { id: true },
+          });
+          if (!stillThere) throw ticketNotFound();
+          throw ticketConflict();
+        }
       } else if (nextLabelIds !== undefined) {
         const existing = await tx.ticket.findFirst({
           where: { id: ticketId, workspaceId },
@@ -253,6 +299,15 @@ export async function DELETE(
     console.error("[DELETE /api/tickets/[id]]", err);
     return Response.json({ error: "Internal server error." }, { status: 500 });
   }
+}
+
+function ticketConflict(): Response {
+  return new Response(
+    JSON.stringify({
+      error: "This ticket was just changed by someone else. Reload and try again.",
+    }),
+    { status: 409, headers: { "Content-Type": "application/json" } }
+  );
 }
 
 function ticketNotFound(): Response {

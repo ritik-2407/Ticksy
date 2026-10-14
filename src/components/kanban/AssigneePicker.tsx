@@ -16,10 +16,13 @@ export function AssigneePicker({
   slug,
   value,
   onChange,
+  disabled = false,
 }: {
   slug: string;
   value: string;
   onChange: (userId: string) => void;
+  /** Read-only: the caller may not reassign this ticket. */
+  disabled?: boolean;
 }) {
   const listId = useId();
   const [members, setMembers] = useState<Member[]>([]);
@@ -120,6 +123,7 @@ export function AssigneePicker({
           aria-autocomplete="list"
           value={query}
           placeholder="Unassigned"
+          disabled={disabled}
           onChange={(event) => {
             edited.current = true;
             setQuery(event.target.value);
@@ -128,11 +132,11 @@ export function AssigneePicker({
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          className="glass-input mt-1 w-full"
+          className="glass-input mt-1 w-full disabled:cursor-not-allowed disabled:opacity-60"
         />
       </label>
 
-      {open ? (
+      {open && !disabled ? (
         <ul
           id={listId}
           role="listbox"

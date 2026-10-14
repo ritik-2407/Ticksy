@@ -41,10 +41,11 @@ Shown in the order a user meets them: landing page, workspace dashboard, board, 
 - **Optimistic moves.** The card moves instantly. If the server rejects the change, the card goes back and an error shows.
 - Filter by priority and by assignee, including "Unassigned".
 - Ticket drawer for editing title, description, status, priority, assignee and labels, with a comment thread.
+- **Ownership rules.** A ticket with an assignee can only be moved, re-prioritised or reassigned by that assignee or an admin. Cards you can't move aren't draggable, and the matching drawer fields are disabled. See [Who can change what](#who-can-change-what-on-a-ticket).
 
 **Workspaces and people**
 - Create any number of workspaces. One user can belong to many, with a different role in each.
-- Two roles: `ADMIN` and `MEMBER`. Only admins can delete tickets, manage labels, invite people, remove members, or rename and delete the workspace.
+- Two roles: `ADMIN` and `MEMBER`. Only admins can delete tickets, manage labels, invite people, remove members, or rename and delete the workspace. Members work on tickets within the ownership rules below.
 - A workspace always keeps at least one admin. Removing the last one is rejected.
 - Per-workspace labels with colours. Label names are unique inside a workspace but can repeat across workspaces.
 
@@ -109,6 +110,19 @@ Sessions live in Postgres, so a session can be revoked server-side immediately. 
 **Invites are signed tokens, not rows.**
 No `Invite` table, no cleanup job, no extra query on accept. The token carries `{ workspaceId, slug, role, email }`, is signed with `HS256`, and the accept page requires the signed-in user's email to match. A forwarded link doesn't let a stranger in. The trade-off is that a single token can't be revoked before it expires. For a 48-hour link that was acceptable, and adding an `Invite` model later would remove the limit.
 
+**Ticket edits follow ownership, not just role.**
+The assignee is the person accountable for a ticket, so changing it is not free for everyone. The rule is below. Two choices behind it:
+
+- *Unassigned tickets are open to every member.* Every new ticket starts unassigned. If only admins could move those, nobody else could pick up work.
+- *Assigned tickets are protected.* One member can't quietly reassign, close or re-prioritise another member's work.
+
+The policy lives in one pure file, `lib/ticket-permissions.ts`. The `PATCH` route enforces it, and the board and drawer import the same functions to disable controls. Hiding a control is cosmetic, because anyone can call the API directly, so the route is the real lock.
+
+Two details that are easy to get wrong:
+
+- *Only changed fields are checked.* The drawer sends every field on each save. A field counts as changed only if it differs from the stored value, so a member can edit the title of someone else's ticket without tripping the status rule.
+- *The write is pinned to the assignee that was checked.* Two members can grab the same unassigned ticket at once. The update's `WHERE` includes the assignee that was read, so the loser gets `409` instead of silently overwriting the winner.
+
 **Comments are edit-by-author only.**
 Not even an admin can rewrite someone else's comment, because it would put words under another person's name. Admins can delete the whole ticket instead.
 
@@ -117,6 +131,23 @@ The board page queries Prisma itself instead of calling its own API, which avoid
 
 **Input is validated at the edge of every route.**
 Zod schemas parse every request body, strip unknown keys (so a client can't set `workspaceId` or `createdById`), and produce consistent `400` errors.
+
+### Who can change what on a ticket
+
+An **owned** ticket has an assignee. An **unowned** one doesn't.
+
+| Action | Admin | Assignee | Other member |
+| --- | :---: | :---: | :---: |
+| Create a ticket, comment, add labels | yes | yes | yes |
+| Edit title and description | yes | yes | yes |
+| Assign an unowned ticket (to anyone) | yes | n/a | yes |
+| Reassign or unassign an owned ticket | yes | yes | no |
+| Change status of an unowned ticket | yes | n/a | yes |
+| Change status of an owned ticket | yes | yes | no |
+| Change priority | yes | yes | no |
+| Delete a ticket | yes | no | no |
+
+Rules are checked against the ticket as it is before the request applies, so one request can't unlock another field. To take an unowned ticket and then change its priority, assign it first, then save again.
 
 ## API
 
@@ -127,7 +158,8 @@ All routes require a session. Errors return `{ error }` with an appropriate stat
 | `POST` | `/api/workspaces` | any user | Create a workspace (the creator becomes its admin) |
 | `PATCH` `DELETE` | `/api/workspaces/[slug]` | admin | Rename, or delete (requires typing the slug) |
 | `GET` `POST` | `/api/workspaces/[slug]/tickets` | member | List and create tickets |
-| `GET` `PATCH` | `/api/tickets/[id]` | member | Read and update a ticket |
+| `GET` | `/api/tickets/[id]` | member | Read a ticket |
+| `PATCH` | `/api/tickets/[id]` | member, with [ownership rules](#who-can-change-what-on-a-ticket) | Update a ticket. `403` if you don't own the field you're changing, `409` if the assignee changed while you were saving |
 | `DELETE` | `/api/tickets/[id]` | admin | Delete a ticket and its comments |
 | `GET` `POST` | `/api/tickets/[id]/comments` | member | Read and post comments |
 | `PATCH` | `/api/tickets/[id]/comments/[commentId]` | author | Edit a comment |
@@ -207,6 +239,11 @@ The permission guards are tested without a database by stubbing Prisma. The test
 - `403` for a non-member, or for a member attempting admin work
 - `404` for a missing ticket and for a ticket in another workspace
 
+The ticket edit policy has two more suites:
+
+- `ticket-permissions.test.ts` checks the rules as a table, covering admin, assignee and other member against owned and unowned tickets. It includes the edge cases: resending an unchanged field is not a change, and `null` is a real value.
+- `ticket-patch.test.ts` calls the real `PATCH` handler over stubbed Prisma. It proves the status codes (`403` for a field you don't own, `200` for title and label edits), that a refused request never reaches the write, and that losing an assignment race returns `409`.
+
 Other tests cover board filtering, callback-URL sanitising (rejecting off-site redirects) and invite tokens (the email is stored in lowercase and matched case-insensitively).
 
 ## Project structure
@@ -231,6 +268,7 @@ src/
   lib/
     guard.ts             authorization guards
     ticket.ts            shared ticket shape + assignee/label checks
+    ticket-permissions.ts  who may change status, priority, assignee (shared by API and UI)
     invite.ts            signed invite tokens
     mail.ts              Resend client
 tests/                   Vitest suites
@@ -252,7 +290,8 @@ Listed up front so they aren't a surprise.
 - **Order inside a column isn't saved.** There is no position column, so cards sort by last update.
 - **Invite tokens can't be revoked** before the 48 hours are up (see [Design decisions](#design-decisions)).
 - **No text search** yet. Filtering is by priority and assignee only.
-- **No real-time sync.** A second user sees changes after a refresh.
+- **No real-time sync.** A second user sees changes after a refresh. Because of the ownership rules, a stale board can show a card as movable that was reassigned a moment ago. The server is the authority: the move is refused with the reason and the card snaps back.
+- **No audit trail.** Assignment and status changes aren't recorded, so you can't see who reassigned a ticket or when.
 
 ## Roadmap
 
