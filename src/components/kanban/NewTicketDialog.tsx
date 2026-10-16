@@ -1,26 +1,26 @@
 "use client";
 
 /**
- * Creates a ticket with POST /api/workspaces/[slug]/tickets.
+ * Creates a ticket through the board's data source.
  * The board inserts the returned ticket into its own state.
  */
 
 import { useEffect, useState, type FormEvent } from "react";
 import { AssigneePicker } from "@/components/kanban/AssigneePicker";
+import { useBoardData } from "@/components/kanban/board-data-context";
 import { BOARD_COLUMNS } from "@/components/kanban/columns";
 import type { TicketCard as Ticket } from "@/lib/ticket";
 
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 
 export function NewTicketDialog({
-  slug,
   onClose,
   onCreated,
 }: {
-  slug: string;
   onClose: () => void;
   onCreated: (ticket: Ticket) => void;
 }) {
+  const api = useBoardData();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<Ticket["status"]>("OPEN");
@@ -48,22 +48,14 @@ export function NewTicketDialog({
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/workspaces/${slug}/tickets`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: nextTitle,
-          description: description.trim(),
-          status,
-          priority,
-          assigneeId: assigneeId || null,
-        }),
+      const created = await api.createTicket({
+        title: nextTitle,
+        description: description.trim(),
+        status,
+        priority,
+        assigneeId: assigneeId || null,
       });
-      const body = (await res.json()) as { ticket?: Ticket; error?: string };
-      if (!res.ok || !body.ticket) {
-        throw new Error(body.error ?? "Could not create this ticket.");
-      }
-      onCreated(body.ticket);
+      onCreated(created);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create this ticket.");
     } finally {
@@ -159,7 +151,7 @@ export function NewTicketDialog({
             </label>
           </div>
 
-          <AssigneePicker slug={slug} value={assigneeId} onChange={setAssigneeId} />
+          <AssigneePicker value={assigneeId} onChange={setAssigneeId} />
 
           {error ? (
             <p role="alert" className="text-sm text-red-600 dark:text-red-400">

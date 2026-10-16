@@ -18,6 +18,8 @@
  *   - Lowercase letters, numbers, hyphens only: /^[a-z0-9-]+$/
  *   - 3–48 characters
  *   - Unique across all workspaces (@@unique on the model)
+ *   - Not a reserved route name ("demo", "api", "sign-in" …): the workspace
+ *     lives at /<slug>, so those would collide with real pages
  *
  * Request body:
  *   { "name": "Acme Corp", "slug": "acme-corp" }
@@ -34,6 +36,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { isReservedSlug } from "@/lib/reserved-slugs";
 
 // ─── Validation schema ───────────────────────────────────────────────────────
 
@@ -52,7 +55,8 @@ const CreateWorkspaceSchema = z.object({
       /^[a-z0-9-]+$/,
       "Slug may only contain lowercase letters, numbers, and hyphens"
     )
-    .trim(),
+    .trim()
+    .refine((slug) => !isReservedSlug(slug), "That slug is reserved. Please choose another."),
 });
 
 // ─── Route handler ───────────────────────────────────────────────────────────

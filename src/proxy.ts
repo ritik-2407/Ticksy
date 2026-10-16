@@ -35,21 +35,9 @@
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { isReservedSlug } from "@/lib/reserved-slugs";
 
 // ─── Route classification ────────────────────────────────────────────────────
-
-/**
- * Segments that are NOT workspace slugs — they're top-level app routes.
- * Add any future top-level routes here (e.g. "pricing", "blog").
- */
-const NON_SLUG_SEGMENTS = new Set([
-  "api",
-  "sign-in",
-  "sign-up",
-  "invite",
-  "_next",
-  "favicon.ico",
-]);
 
 /**
  * Returns true if the pathname looks like a workspace-scoped URL.
@@ -60,8 +48,11 @@ const NON_SLUG_SEGMENTS = new Set([
  *   /invite/accept        → false (invite page)
  */
 function isWorkspaceRoute(pathname: string): boolean {
+  // Top-level app routes (api, demo, …) are not workspaces. The list lives in
+  // lib/reserved-slugs.ts, which POST /api/workspaces also uses so nobody can
+  // create a workspace whose URL is one of them.
   const firstSegment = pathname.split("/")[1];
-  return !!firstSegment && !NON_SLUG_SEGMENTS.has(firstSegment);
+  return !!firstSegment && !isReservedSlug(firstSegment);
 }
 
 /**
@@ -72,7 +63,10 @@ function isPublicRoute(pathname: string): boolean {
     pathname.startsWith("/api/auth") ||
     pathname === "/sign-in" ||
     pathname === "/sign-up" ||
-    pathname === "/"
+    pathname === "/" ||
+    // The public demo. Seeded, in-browser data; no account needed.
+    pathname === "/demo" ||
+    pathname.startsWith("/demo/")
   );
 }
 

@@ -5,26 +5,25 @@
  */
 
 import { useEffect, useState, type FormEvent } from "react";
+import { useBoardData } from "@/components/kanban/board-data-context";
+import type { BoardLabel as Label } from "@/lib/board-data";
 import type { TicketCard as Ticket } from "@/lib/ticket";
 import type { Role } from "@prisma/client";
-
-type Label = { id: string; name: string; color: string };
 
 const COLORS = ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#6b7280"];
 
 export function LabelEditor({
-  slug,
   ticketId,
   labels,
   role,
   onUpdated,
 }: {
-  slug: string;
   ticketId: string;
   labels: Label[];
   role: Role;
   onUpdated: (ticket: Ticket) => void;
 }) {
+  const api = useBoardData();
   const [catalog, setCatalog] = useState<Label[]>([]);
   const [selectedIds, setSelectedIds] = useState(() => labels.map((label) => label.id));
   const [loading, setLoading] = useState(true);
@@ -42,11 +41,10 @@ export function LabelEditor({
 
   useEffect(() => {
     let cancelled = false;
-    void fetch(`/api/workspaces/${slug}/labels`)
-      .then(async (res) => {
-        const body = (await res.json()) as { labels?: Label[]; error?: string };
-        if (!res.ok) throw new Error(body.error ?? "Could not load labels");
-        if (!cancelled) setCatalog(body.labels ?? []);
+    void api
+      .listLabels()
+      .then((list) => {
+        if (!cancelled) setCatalog(list);
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -59,7 +57,7 @@ export function LabelEditor({
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [api]);
 
   async function toggle(labelId: string) {
     if (busy) return;
@@ -72,17 +70,9 @@ export function LabelEditor({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/tickets/${ticketId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ labelIds: next }),
-      });
-      const body = (await res.json()) as { ticket?: Ticket; error?: string };
-      if (!res.ok || !body.ticket) {
-        throw new Error(body.error ?? "Could not update labels.");
-      }
-      setSelectedIds(body.ticket.labels.map((label) => label.id));
-      onUpdated(body.ticket);
+      const updated = await api.updateTicket(ticketId, { labelIds: next });
+      setSelectedIds(updated.labels.map((label) => label.id));
+      onUpdated(updated);
     } catch (err) {
       setSelectedIds(previous);
       setError(err instanceof Error ? err.message : "Could not update labels.");
@@ -99,16 +89,7 @@ export function LabelEditor({
     setCreating(true);
     setError(null);
     try {
-      const res = await fetch(`/api/workspaces/${slug}/labels`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: nextName, color }),
-      });
-      const body = (await res.json()) as { label?: Label; error?: string };
-      if (!res.ok || !body.label) {
-        throw new Error(body.error ?? "Could not create this label.");
-      }
-      const created = body.label;
+      const created = await api.createLabel({ name: nextName, color });
       setCatalog((current) =>
         [...current, created].sort((a, b) => a.name.localeCompare(b.name))
       );

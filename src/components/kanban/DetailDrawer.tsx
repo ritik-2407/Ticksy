@@ -3,7 +3,7 @@
 /**
  * Ticket detail drawer.
  *
- * Clicking a card opens this panel. Save sends one PATCH with the fields
+ * Clicking a card opens this panel. Save sends one update with the fields
  * the form owns: title, description, status, priority, assignee.
  * Labels are edited on their own, with the full labelIds set.
  * Admins can delete the ticket. Members cannot.
@@ -17,6 +17,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { AssigneePicker } from "@/components/kanban/AssigneePicker";
+import { useBoardData } from "@/components/kanban/board-data-context";
 import { CommentThread } from "@/components/kanban/CommentThread";
 import { LabelEditor } from "@/components/kanban/LabelEditor";
 import { BOARD_COLUMNS } from "@/components/kanban/columns";
@@ -28,7 +29,6 @@ const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 
 export function DetailDrawer({
   ticket,
-  slug,
   role,
   currentUserId,
   onClose,
@@ -37,7 +37,6 @@ export function DetailDrawer({
   onCommented,
 }: {
   ticket: Ticket;
-  slug: string;
   role: Role;
   currentUserId: string;
   onClose: () => void;
@@ -45,6 +44,7 @@ export function DetailDrawer({
   onDeleted: () => void;
   onCommented: () => void;
 }) {
+  const api = useBoardData();
   const [title, setTitle] = useState(ticket.title);
   const [description, setDescription] = useState(ticket.description);
   const [status, setStatus] = useState(ticket.status);
@@ -93,27 +93,19 @@ export function DetailDrawer({
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/tickets/${ticket.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: nextTitle,
-          description: description.trim(),
-          status,
-          priority,
-          assigneeId: assigneeId || null,
-        }),
+      const saved = await api.updateTicket(ticket.id, {
+        title: nextTitle,
+        description: description.trim(),
+        status,
+        priority,
+        assigneeId: assigneeId || null,
       });
-      const body = (await res.json()) as { ticket?: Ticket; error?: string };
-      if (!res.ok || !body.ticket) {
-        throw new Error(body.error ?? "Could not save this ticket.");
-      }
-      setTitle(body.ticket.title);
-      setDescription(body.ticket.description);
-      setStatus(body.ticket.status);
-      setPriority(body.ticket.priority);
-      setAssigneeId(body.ticket.assignee?.id ?? "");
-      onSaved(body.ticket);
+      setTitle(saved.title);
+      setDescription(saved.description);
+      setStatus(saved.status);
+      setPriority(saved.priority);
+      setAssigneeId(saved.assignee?.id ?? "");
+      onSaved(saved);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save this ticket.");
     } finally {
@@ -126,9 +118,7 @@ export function DetailDrawer({
     setDeleting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/tickets/${ticket.id}`, { method: "DELETE" });
-      const body = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(body.error ?? "Could not delete this ticket.");
+      await api.deleteTicket(ticket.id);
       onDeleted();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete this ticket.");
@@ -231,7 +221,6 @@ export function DetailDrawer({
             </div>
 
             <AssigneePicker
-              slug={slug}
               value={assigneeId}
               onChange={setAssigneeId}
               disabled={!allowed.canChangeAssignee}
@@ -251,7 +240,6 @@ export function DetailDrawer({
           </form>
 
           <LabelEditor
-            slug={slug}
             ticketId={ticket.id}
             labels={ticket.labels}
             role={role}

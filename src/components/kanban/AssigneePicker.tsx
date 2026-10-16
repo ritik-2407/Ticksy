@@ -5,42 +5,38 @@
  */
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
-
-type Member = {
-  user: { id: string; name: string };
-};
+import { useBoardData } from "@/components/kanban/board-data-context";
+import type { BoardMember } from "@/lib/board-data";
 
 type Option = { id: string; name: string };
 
 export function AssigneePicker({
-  slug,
   value,
   onChange,
   disabled = false,
 }: {
-  slug: string;
   value: string;
   onChange: (userId: string) => void;
   /** Read-only: the caller may not reassign this ticket. */
   disabled?: boolean;
 }) {
   const listId = useId();
-  const [members, setMembers] = useState<Member[]>([]);
+  const api = useBoardData();
+  const [members, setMembers] = useState<BoardMember[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const edited = useRef(false);
 
-  const selectedName = members.find((member) => member.user.id === value)?.user.name ?? "";
+  const selectedName = members.find((member) => member.id === value)?.name ?? "";
 
   useEffect(() => {
     let cancelled = false;
-    void fetch(`/api/workspaces/${slug}/members`)
-      .then(async (res) => {
-        const body = (await res.json()) as { members?: Member[]; error?: string };
-        if (!res.ok) throw new Error(body.error ?? "Could not load members");
-        if (!cancelled) setMembers(body.members ?? []);
+    void api
+      .listMembers()
+      .then((list) => {
+        if (!cancelled) setMembers(list);
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -50,7 +46,7 @@ export function AssigneePicker({
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [api]);
 
   useEffect(() => {
     if (edited.current) return;
@@ -62,8 +58,8 @@ export function AssigneePicker({
   const options: Option[] = [
     ...(!filtering || "unassigned".includes(needle) ? [{ id: "", name: "Unassigned" }] : []),
     ...members
-      .filter((member) => !filtering || member.user.name.toLowerCase().includes(needle))
-      .map((member) => ({ id: member.user.id, name: member.user.name })),
+      .filter((member) => !filtering || member.name.toLowerCase().includes(needle))
+      .map((member) => ({ id: member.id, name: member.name })),
   ];
 
   function choose(option: Option) {

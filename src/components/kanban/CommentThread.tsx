@@ -5,13 +5,8 @@
  */
 
 import { useEffect, useState, type FormEvent } from "react";
-
-type Comment = {
-  id: string;
-  body: string;
-  createdAt: string;
-  author: { id: string; name: string; image: string | null };
-};
+import { useBoardData } from "@/components/kanban/board-data-context";
+import type { BoardComment as Comment } from "@/lib/board-data";
 
 function initials(name: string): string {
   return name
@@ -40,6 +35,7 @@ export function CommentThread({
   currentUserId: string;
   onPosted: () => void;
 }) {
+  const api = useBoardData();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState("");
@@ -51,11 +47,10 @@ export function CommentThread({
 
   useEffect(() => {
     let cancelled = false;
-    void fetch(`/api/tickets/${ticketId}/comments`)
-      .then(async (res) => {
-        const body = (await res.json()) as { comments?: Comment[]; error?: string };
-        if (!res.ok) throw new Error(body.error ?? "Could not load comments");
-        if (!cancelled) setComments(body.comments ?? []);
+    void api
+      .listComments(ticketId)
+      .then((list) => {
+        if (!cancelled) setComments(list);
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -68,7 +63,7 @@ export function CommentThread({
     return () => {
       cancelled = true;
     };
-  }, [ticketId]);
+  }, [api, ticketId]);
 
   async function post(event: FormEvent) {
     event.preventDefault();
@@ -78,16 +73,8 @@ export function CommentThread({
     setPosting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/tickets/${ticketId}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body }),
-      });
-      const payload = (await res.json()) as { comment?: Comment; error?: string };
-      if (!res.ok || !payload.comment) {
-        throw new Error(payload.error ?? "Could not post this comment.");
-      }
-      setComments((current) => [...current, payload.comment as Comment]);
+      const posted = await api.postComment(ticketId, body);
+      setComments((current) => [...current, posted]);
       setDraft("");
       onPosted();
     } catch (err) {
@@ -115,16 +102,7 @@ export function CommentThread({
     setSavingEdit(true);
     setError(null);
     try {
-      const res = await fetch(`/api/tickets/${ticketId}/comments/${editingId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body }),
-      });
-      const payload = (await res.json()) as { comment?: Comment; error?: string };
-      if (!res.ok || !payload.comment) {
-        throw new Error(payload.error ?? "Could not save this comment.");
-      }
-      const saved = payload.comment;
+      const saved = await api.editComment(ticketId, editingId, body);
       setComments((current) => current.map((item) => (item.id === saved.id ? saved : item)));
       setEditingId(null);
     } catch (err) {

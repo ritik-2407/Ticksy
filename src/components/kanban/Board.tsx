@@ -12,7 +12,7 @@
  * column in the database, so order inside a column is not saved.
  */
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -25,6 +25,8 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { createApiDataSource } from "@/components/kanban/api-data-source";
+import { BoardDataProvider } from "@/components/kanban/board-data-context";
 import { Column } from "@/components/kanban/Column";
 import { DetailDrawer } from "@/components/kanban/DetailDrawer";
 import { NewTicketDialog } from "@/components/kanban/NewTicketDialog";
@@ -39,6 +41,7 @@ import {
   type AssigneeFilter,
   type PriorityFilter,
 } from "@/components/kanban/columns";
+import type { BoardDataSource } from "@/lib/board-data";
 import type { TicketCard as Ticket } from "@/lib/ticket";
 import { getTicketPermissions } from "@/lib/ticket-permissions";
 import type { Role } from "@prisma/client";
@@ -56,6 +59,7 @@ export function Board({
   currentUserId,
   members,
   tickets: initialTickets,
+  dataSource,
 }: {
   workspaceName: string;
   slug: string;
@@ -63,7 +67,16 @@ export function Board({
   currentUserId: string;
   members: { id: string; name: string }[];
   tickets: Ticket[];
+  /**
+   * Where reads and writes go. Omitted in the real app, which talks to /api
+   * for this workspace. The public demo passes an in-memory source.
+   */
+  dataSource?: BoardDataSource;
 }) {
+  const api = useMemo(
+    () => dataSource ?? createApiDataSource(slug),
+    [dataSource, slug]
+  );
   const [tickets, setTickets] = useState(initialTickets);
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("ALL");
   const [assigneeFilter, setAssigneeFilter] = useState<AssigneeFilter>("ALL");
@@ -124,21 +137,13 @@ export function Board({
     setTickets((current) => moveTicket(current, ticketId, overId));
     setPendingId(ticketId);
 
-    void fetch(`/api/tickets/${ticketId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: overId }),
-    })
-      .then(async (res) => {
-        if (res.ok) return;
-        // Show the server's reason (for example, the ticket was reassigned
-        // while this board was open) instead of a generic failure.
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "status update failed");
-      })
+    void api
+      .updateTicket(ticketId, { status: overId })
       .catch((err: unknown) => {
         setTickets((current) => moveTicket(current, ticketId, previousStatus));
-        const reason = err instanceof Error && err.message !== "status update failed" ? ` ${err.message}` : "";
+        // Show the reason (for example, the ticket was reassigned while
+        // this board was open) instead of a generic failure.
+        const reason = err instanceof Error ? ` ${err.message}` : "";
         setError(`Could not save that move. The ticket was put back.${reason}`);
       })
       .finally(() => {
@@ -174,6 +179,7 @@ export function Board({
   }
 
   return (
+    <BoardDataProvider value={api}>
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Board header */}
       <header className="glass-header flex flex-wrap items-center justify-between gap-3 px-6 py-4">
@@ -306,7 +312,6 @@ export function Board({
         <DetailDrawer
           key={openTicket.id}
           ticket={openTicket}
-          slug={slug}
           role={role}
           currentUserId={currentUserId}
           onClose={() => setOpenTicketId(null)}
@@ -330,7 +335,6 @@ export function Board({
 
       {creating ? (
         <NewTicketDialog
-          slug={slug}
           onClose={() => setCreating(false)}
           onCreated={(ticket) => {
             setTickets((current) => [ticket, ...current]);
@@ -341,5 +345,6 @@ export function Board({
         />
       ) : null}
     </div>
+    </BoardDataProvider>
   );
 }

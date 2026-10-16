@@ -216,6 +216,9 @@ function LandingNav() {
           <a href="#how-it-works" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-150">
             How it works
           </a>
+          <Link href="/demo" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-150">
+            Demo
+          </Link>
         </div>
 
         {/* Right actions */}
@@ -255,12 +258,12 @@ function HeroSection() {
         >
           Get started
         </Link>
-        <a
-          href="#how-it-works"
+        <Link
+          href="/demo"
           className="inline-flex items-center gap-1.5 rounded-xl border border-black/[0.1] dark:border-white/10 bg-[#faf7f2]/70 dark:bg-white/5 backdrop-blur-sm px-6 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-[#faf7f2]/90 dark:hover:bg-white/10 transition-all duration-150"
         >
-          How it works <ArrowRightIcon />
-        </a>
+          Try the demo <ArrowRightIcon />
+        </Link>
       </div>
 
     </section>
@@ -438,6 +441,12 @@ function CTASection() {
             <SparkleIcon />
             Sign in for free
           </Link>
+          <Link
+            href="/demo"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-black/[0.1] dark:border-white/10 bg-[#faf7f2]/70 dark:bg-white/5 backdrop-blur-sm px-7 py-3.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-[#faf7f2]/90 dark:hover:bg-white/10 transition-all duration-150"
+          >
+            Try the demo first
+          </Link>
         </div>
       </div>
     </section>
@@ -461,6 +470,7 @@ function Footer() {
             <a href="#features" className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Features</a>
             <a href="#board" className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Product</a>
             <a href="#how-it-works" className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">How it works</a>
+            <Link href="/demo" className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Demo</Link>
             <Link href="/sign-in" className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Sign in</Link>
           </div>
 
