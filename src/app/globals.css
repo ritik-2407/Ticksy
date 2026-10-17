@@ -42,6 +42,20 @@
     min-height: 100vh;
   }
 
+  /* Native <select> popups ignore translucent backgrounds (.glass-input), so
+     options need an opaque bg + explicit text colour or they render
+     light-on-white in dark mode. */
+  select option,
+  select optgroup {
+    background-color: #faf7f2;
+    color: #111827;
+  }
+  .dark select option,
+  .dark select optgroup {
+    background-color: #18181b;
+    color: #f3f4f6;
+  }
+
   /* Scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
